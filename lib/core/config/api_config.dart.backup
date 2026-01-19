@@ -1,0 +1,40 @@
+/// API Configuration
+class ApiConfig {
+  // Backend URL - Update this with your computer's IP address
+  static const String baseUrl =
+      'http://192.168.1.100:8000'; // Your computer's IP
+  static const String apiUrl = '$baseUrl/api';
+
+  // Endpoints
+  static const String login = '$apiUrl/auth/login/';
+  static const String loginPassword = '$apiUrl/auth/login-password/';
+  static const String sendVerificationCode = '$apiUrl/auth/send-code/';
+  static const String verifyCode = '$apiUrl/auth/verify-code/';
+  static const String register = '$apiUrl/auth/register/';
+  static const String refresh = '$apiUrl/auth/refresh/';
+  static const String verifyToken = '$apiUrl/auth/verify/';
+  static const String currentUser = '$apiUrl/auth/users/me/';
+  static const String constants = '$apiUrl/auth/constants/';
+  static const String regionsByCountry = '$apiUrl/auth/regions/';
+
+  // Church endpoints
+  static const String sermons = '$apiUrl/church/sermons/';
+  static const String events = '$apiUrl/church/events/';
+  static const String eventRegistrations =
+      '$apiUrl/church/event-registrations/';
+  static const String prayerRequests = '$apiUrl/church/prayer-requests/';
+  static const String testimonies = '$apiUrl/church/testimonies/';
+  static const String giving = '$apiUrl/church/giving/';
+  static const String announcements = '$apiUrl/church/announcements/';
+
+  // Bible endpoints
+  static const String bibleFavorites = '$apiUrl/bible/favorites/';
+  static const String bibleHighlights = '$apiUrl/bible/highlights/';
+
+  // Hymns endpoints
+  static const String hymnFavorites = '$apiUrl/hymns/favorites/';
+
+  // Timeouts
+  static const Duration connectionTimeout = Duration(seconds: 30);
+  static const Duration receiveTimeout = Duration(seconds: 30);
+}

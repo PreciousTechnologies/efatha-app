@@ -1,0 +1,649 @@
+{
+  "BIBLEBOOK": [
+    {
+      "book_number": "1",
+      "book_name": "Genesis",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Genesis 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "2",
+      "book_name": "Exodus",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Exodus 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "3",
+      "book_name": "Leviticus",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Leviticus 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "4",
+      "book_name": "Numbers",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Numbers 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "5",
+      "book_name": "Deuteronomy",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Deuteronomy 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "6",
+      "book_name": "Joshua",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Joshua 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "7",
+      "book_name": "Judges",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Judges 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "8",
+      "book_name": "Ruth",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Ruth 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "9",
+      "book_name": "1 Samuel",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "1 Samuel 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "10",
+      "book_name": "2 Samuel",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "2 Samuel 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "11",
+      "book_name": "1 Kings",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "1 Kings 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "12",
+      "book_name": "2 Kings",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "2 Kings 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "19",
+      "book_name": "Psalms",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Psalms 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "20",
+      "book_name": "Proverbs",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Proverbs 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "23",
+      "book_name": "Isaiah",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Isaiah 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "24",
+      "book_name": "Jeremiah",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Jeremiah 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "27",
+      "book_name": "Daniel",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Daniel 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "40",
+      "book_name": "Matthew",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Matthew 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "41",
+      "book_name": "Mark",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Mark 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "42",
+      "book_name": "Luke",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Luke 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "43",
+      "book_name": "John",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "John 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "44",
+      "book_name": "Acts",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Acts 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "45",
+      "book_name": "Romans",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Romans 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "46",
+      "book_name": "1 Corinthians",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "1 Corinthians 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "47",
+      "book_name": "2 Corinthians",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "2 Corinthians 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "48",
+      "book_name": "Galatians",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Galatians 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "49",
+      "book_name": "Ephesians",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Ephesians 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "50",
+      "book_name": "Philippians",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Philippians 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "51",
+      "book_name": "Colossians",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Colossians 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "52",
+      "book_name": "1 Thessalonians",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "1 Thessalonians 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "53",
+      "book_name": "2 Thessalonians",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "2 Thessalonians 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "54",
+      "book_name": "1 Timothy",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "1 Timothy 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "55",
+      "book_name": "2 Timothy",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "2 Timothy 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "56",
+      "book_name": "Titus",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Titus 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "58",
+      "book_name": "Hebrews",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Hebrews 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "59",
+      "book_name": "James",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "James 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "60",
+      "book_name": "1 Peter",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "1 Peter 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "61",
+      "book_name": "2 Peter",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "2 Peter 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "62",
+      "book_name": "1 John",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "1 John 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "63",
+      "book_name": "2 John",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "2 John 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "64",
+      "book_name": "3 John",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "3 John 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "65",
+      "book_name": "Jude",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Jude 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book_number": "66",
+      "book_name": "Revelation",
+      "CHAPTER": [
+        {
+          "chapter_number": "1",
+          "VERSES": [
+            {
+              "verse_number": "1",
+              "verse_text": "Revelation 1:1 [KJV text will load from API or update later] "
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

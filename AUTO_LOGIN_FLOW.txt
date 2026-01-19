@@ -1,0 +1,260 @@
+# Auto-Login Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         EFATHA APP AUTO-LOGIN FLOW                      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+FIRST TIME LOGIN (User enters credentials)
+═══════════════════════════════════════════════════════════════════════════
+
+┌──────────────┐
+│ LoginScreen  │
+└──────┬───────┘
+       │ User enters username + password
+       ↓
+┌──────────────────────────────┐
+│ ApiService.login()           │
+│ POST /api/auth/login-password/ │
+└──────┬───────────────────────┘
+       │ Backend validates credentials
+       ↓
+┌──────────────────────────────────────┐
+│ Backend Response:                    │
+│ {                                    │
+│   "access": "eyJ0eXAi...",          │
+│   "refresh": "eyJ0eXAi...",         │
+│   "user": {                          │
+│     "id": 1,                         │
+│     "username": "john",              │
+│     "email": "john@example.com"      │
+│   }                                  │
+│ }                                    │
+└──────┬───────────────────────────────┘
+       │
+       ├─→ StorageService.setAccessToken()  ✅
+       ├─→ StorageService.setRefreshToken() ✅
+       ├─→ StorageService.saveUserData()    ✅
+       └─→ StorageService.setLoggedIn(true) ✅
+       │
+       ↓
+┌──────────────┐
+│ HomeScreen   │ ← User is now logged in
+└──────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════
+AUTO-LOGIN (User opens app again)
+═══════════════════════════════════════════════════════════════════════════
+
+┌──────────────┐
+│  App Opens   │
+└──────┬───────┘
+       │
+       ↓
+┌──────────────────┐
+│  SplashScreen    │ (Shows logo + animation)
+└──────┬───────────┘
+       │ After 3 seconds
+       ↓
+┌────────────────────────────────────┐
+│ ApiService.isAuthenticated()       │
+└────────┬───────────────────────────┘
+         │
+         ├─→ Check: Access token exists?
+         │   └─→ StorageService.getAccessToken()
+         │
+         ├─→ YES ✓
+         │   │
+         │   └─→ Verify token is valid
+         │       │
+         │       └─→ ApiService.verifyToken()
+         │           POST /api/auth/verify/
+         │           Body: { "token": "access_token" }
+         │           │
+         │           ├─→ VALID (200 OK) ✓
+         │           │   │
+         │           │   └─→ User authenticated! ✅
+         │           │       │
+         │           │       ↓
+         │           │   ┌──────────────┐
+         │           │   │ HomeScreen   │ AUTO-LOGIN SUCCESS! 🎉
+         │           │   └──────────────┘
+         │           │
+         │           └─→ INVALID (401 Unauthorized) ✗
+         │               │
+         │               └─→ Try refresh token
+         │                   │
+         │                   └─→ ApiService.refreshToken()
+         │                       POST /api/auth/refresh/
+         │                       Body: { "refresh": "refresh_token" }
+         │                       │
+         │                       ├─→ SUCCESS (200 OK) ✓
+         │                       │   │
+         │                       │   ├─→ New access token saved ✅
+         │                       │   │
+         │                       │   ↓
+         │                       │   ┌──────────────┐
+         │                       │   │ HomeScreen   │ AUTO-LOGIN SUCCESS! 🎉
+         │                       │   └──────────────┘
+         │                       │
+         │                       └─→ FAILED ✗
+         │                           │
+         │                           ├─→ Clear all storage
+         │                           │
+         │                           ↓
+         │                       ┌────────────────┐
+         │                       │ WelcomeScreen  │ User must login
+         │                       └────────────────┘
+         │
+         └─→ NO ✗
+             │
+             └─→ No tokens found
+                 │
+                 ↓
+             ┌────────────────┐
+             │ WelcomeScreen  │ User must login
+             └────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════
+BACKGROUND TOKEN REFRESH (Keeps user logged in)
+═══════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────┐
+│  App is Active      │
+│  User logged in     │
+└──────┬──────────────┘
+       │
+       ↓
+┌─────────────────────────────┐
+│ AuthManager (Optional)      │
+│ Timer: Every 30 minutes     │
+└──────┬──────────────────────┘
+       │
+       ↓
+┌────────────────────────────┐
+│ ApiService.refreshToken()  │
+│ POST /api/auth/refresh/    │
+└──────┬─────────────────────┘
+       │
+       ├─→ SUCCESS ✓
+       │   │
+       │   └─→ New access token saved
+       │       │
+       │       └─→ User remains logged in ✅
+       │
+       └─→ FAILED ✗
+           │
+           └─→ Logout user
+               │
+               ↓
+           ┌────────────────┐
+           │ WelcomeScreen  │
+           └────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════
+LOGOUT (User manually logs out)
+═══════════════════════════════════════════════════════════════════════════
+
+┌──────────────┐
+│  HomeScreen  │
+└──────┬───────┘
+       │ User taps "Sign Out"
+       ↓
+┌─────────────────────┐
+│ ApiService.logout() │
+└──────┬──────────────┘
+       │
+       └─→ StorageService.clearAll()
+           │
+           ├─→ Clear access token   ✓
+           ├─→ Clear refresh token  ✓
+           ├─→ Clear user data      ✓
+           └─→ Set isLoggedIn=false ✓
+           │
+           ↓
+       ┌────────────────┐
+       │ WelcomeScreen  │
+       └────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════
+KEY COMPONENTS
+═══════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ StorageService                                                      │
+├─────────────────────────────────────────────────────────────────────┤
+│ • Uses SharedPreferences (encrypted local storage)                 │
+│ • Stores: access_token, refresh_token, user_data, isLoggedIn       │
+│ • Methods: setAccessToken(), getAccessToken(), saveUserData(), etc │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ ApiService                                                          │
+├─────────────────────────────────────────────────────────────────────┤
+│ • Handles all API calls                                            │
+│ • Auto-includes Authorization header                               │
+│ • Methods: login(), verifyToken(), refreshToken(), logout()        │
+│ • Smart: Auto-saves tokens on login                                │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ AuthManager (Optional - Advanced)                                  │
+├─────────────────────────────────────────────────────────────────────┤
+│ • Centralized auth state management                                │
+│ • Auto token refresh timer (30 min intervals)                      │
+│ • Notifies app of auth state changes                               │
+│ • Methods: initialize(), login(), logout(), validateSession()      │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ SplashScreen                                                        │
+├─────────────────────────────────────────────────────────────────────┤
+│ • First screen shown on app launch                                 │
+│ • Checks authentication status                                     │
+│ • Routes to HomeScreen (authenticated) or WelcomeScreen (not)      │
+└─────────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════
+TOKEN LIFECYCLE
+═══════════════════════════════════════════════════════════════════════════
+
+ACCESS TOKEN:
+├─ Lifetime: 1 hour (configured in Django)
+├─ Purpose: Authenticate API requests
+├─ Storage: SharedPreferences (local device)
+└─ Refresh: Every 30 min (before expiry) or on demand
+
+REFRESH TOKEN:
+├─ Lifetime: 7 days (configured in Django)
+├─ Purpose: Get new access tokens without re-login
+├─ Storage: SharedPreferences (local device)
+└─ Usage: When access token expires
+
+STORAGE PERSISTENCE:
+├─ Stored on device (survives app close/reopen)
+├─ Cleared on: Logout, or refresh token expiry
+└─ Encrypted by OS (Android/iOS secure storage)
+
+
+═══════════════════════════════════════════════════════════════════════════
+COMPARISON WITH BOLT APP
+═══════════════════════════════════════════════════════════════════════════
+
+BOLT APP                          │  EFATHA APP
+──────────────────────────────────┼───────────────────────────────────────
+Phone + OTP login                 │  Username + Password login ✅
+Tokens stored locally             │  Tokens stored locally ✅
+Auto-login on app reopen          │  Auto-login on app reopen ✅
+Background token refresh          │  Background token refresh ✅
+Persistent session                │  Persistent session ✅
+Biometric login (fingerprint)     │  (Can be added)
+Session expires after 30 days     │  Session expires after 7 days ✅
+
+
+═══════════════════════════════════════════════════════════════════════════
