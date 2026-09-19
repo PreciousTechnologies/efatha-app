@@ -13,8 +13,9 @@ PESAPAL_CONSUMER_SECRET_LIVE = 'I7RVFHfvANb4/559uM2UUNdXpd4='
 PESAPAL_CONSUMER_KEY_SANDBOX = 'qkio1BGGYAXTu2JOfm7XSXNruoZsrqEW'
 PESAPAL_CONSUMER_SECRET_SANDBOX = 'osGQ364R49cXKeOYSpaOnT++rHs='
 
-# Environment (sandbox or live)
-PESAPAL_ENVIRONMENT = 'sandbox'  # Change to 'live' when M-Pesa is activated
+# Environment: 'live' or 'sandbox'
+# Live is active (M-Pesa enabled). Switch to 'sandbox' only for testing.
+PESAPAL_ENVIRONMENT = 'live'
 
 # Use appropriate credentials based on environment
 PESAPAL_CONSUMER_KEY = PESAPAL_CONSUMER_KEY_SANDBOX if PESAPAL_ENVIRONMENT == 'sandbox' else PESAPAL_CONSUMER_KEY_LIVE
@@ -30,9 +31,6 @@ PESAPAL_TRANSACTION_STATUS_URL = f'{PESAPAL_API_URL}/api/Transactions/GetTransac
 # Callback URLs (update with your actual domain in production)
 PESAPAL_CALLBACK_URL = 'https://your-domain.com/api/payments/pesapal/callback'
 PESAPAL_IPN_URL = 'https://your-domain.com/api/payments/pesapal/ipn'
-
-# Environment (sandbox or live)
-PESAPAL_ENVIRONMENT = 'live'  # Change to 'sandbox' for testing
 
 # Supported Payment Methods by Currency
 # TZS (Tanzania): M-Pesa, Airtel Money, Tigo Pesa, Cards, Bank Transfer

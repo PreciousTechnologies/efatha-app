@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../config/supabase_config.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
+import 'supabase_auth_service.dart';
 
 /// AuthManager - Centralized authentication state management
-/// Handles token refresh, session persistence, and auto-login
+/// Supabase-first (auto session), Django JWT fallback during migration.
 class AuthManager extends ChangeNotifier {
   final ApiService _apiService = ApiService();
   final StorageService _storageService = StorageService();
+  final SupabaseAuthService _supabaseAuth = SupabaseAuthService();
 
   bool _isAuthenticated = false;
   bool _isInitialized = false;
@@ -21,7 +24,20 @@ class AuthManager extends ChangeNotifier {
     if (_isInitialized) return;
 
     try {
-      // Check if user has valid session
+      // Supabase session first (no refresh timer needed — SDK handles it).
+      if (SupabaseConfig.isConfigured) {
+        try {
+          if (_supabaseAuth.isSignedIn) {
+            _isAuthenticated = true;
+            _isInitialized = true;
+            notifyListeners();
+            return;
+          }
+        } catch (_) {
+          // Fall through to Django check.
+        }
+      }
+      // Check if user has valid session (Django fallback)
       _isAuthenticated = await _apiService.isAuthenticated();
       _isInitialized = true;
 
@@ -61,9 +77,14 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
-  /// Logout user and clear session
+  /// Logout user and clear session (Supabase + Django)
   Future<void> logout() async {
     try {
+      if (SupabaseConfig.isConfigured) {
+        try {
+          await _supabaseAuth.signOut();
+        } catch (_) {}
+      }
       await _apiService.logout();
       _isAuthenticated = false;
       _stopTokenRefreshTimer();
@@ -116,6 +137,15 @@ class AuthManager extends ChangeNotifier {
   /// Check if current session is still valid
   Future<bool> validateSession() async {
     try {
+      if (SupabaseConfig.isConfigured) {
+        try {
+          if (_supabaseAuth.isSignedIn) {
+            _isAuthenticated = true;
+            notifyListeners();
+            return true;
+          }
+        } catch (_) {}
+      }
       final isValid = await _apiService.isAuthenticated();
 
       if (!isValid && _isAuthenticated) {

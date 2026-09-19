@@ -166,8 +166,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       setState(() => _selectedFilter = filter);
                     },
                     backgroundColor: Colors.grey[100],
-                    selectedColor: AppColors.primaryPurpleLight.withOpacity(
-                      0.3,
+                    selectedColor: AppColors.primaryPurpleLight.withValues(
+                      alpha: 0.3,
                     ),
                     labelStyle: TextStyle(
                       color: isSelected
@@ -212,11 +212,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color, color.withOpacity(0.7)]),
+        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.7)]),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -238,7 +238,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             label,
             style: TextStyle(
               fontSize: 11,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
         ],
@@ -255,7 +255,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -363,9 +363,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         text,

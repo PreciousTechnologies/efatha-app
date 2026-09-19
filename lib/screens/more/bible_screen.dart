@@ -644,7 +644,7 @@ class _BibleScreenState extends State<BibleScreen>
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -870,8 +870,8 @@ class _BibleScreenState extends State<BibleScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primaryPurpleDeep.withOpacity(0.2),
-                      AppColors.primaryPurpleVibrant.withOpacity(0.2),
+                      AppColors.primaryPurpleDeep.withValues(alpha: 0.2),
+                      AppColors.primaryPurpleVibrant.withValues(alpha: 0.2),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
@@ -903,8 +903,8 @@ class _BibleScreenState extends State<BibleScreen>
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.primaryPurpleDeep.withOpacity(0.2),
-                          AppColors.primaryPurpleVibrant.withOpacity(0.2),
+                          AppColors.primaryPurpleDeep.withValues(alpha: 0.2),
+                          AppColors.primaryPurpleVibrant.withValues(alpha: 0.2),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(8),

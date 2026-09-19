@@ -355,8 +355,8 @@ class _SubmitPrayerScreenState extends State<SubmitPrayerScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.primaryPurpleDeep.withOpacity(0.1),
-                          AppColors.primaryPurpleLight.withOpacity(0.05),
+                          AppColors.primaryPurpleDeep.withValues(alpha: 0.1),
+                          AppColors.primaryPurpleLight.withValues(alpha: 0.05),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -377,8 +377,8 @@ class _SubmitPrayerScreenState extends State<SubmitPrayerScreen> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primaryPurpleLight.withOpacity(
-                                  0.3,
+                                color: AppColors.primaryPurpleLight.withValues(
+                                  alpha: 0.3,
                                 ),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
@@ -687,7 +687,7 @@ class _SubmitPrayerScreenState extends State<SubmitPrayerScreen> {
                           ),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? AppColors.primaryPurpleLight.withOpacity(0.2)
+                                ? AppColors.primaryPurpleLight.withValues(alpha: 0.2)
                                 : Colors.grey[50],
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
@@ -845,7 +845,7 @@ class _SubmitPrayerScreenState extends State<SubmitPrayerScreen> {
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: _isAnonymous
-                                ? AppColors.primaryPurpleLight.withOpacity(0.2)
+                                ? AppColors.primaryPurpleLight.withValues(alpha: 0.2)
                                 : Colors.grey[200],
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -888,7 +888,7 @@ class _SubmitPrayerScreenState extends State<SubmitPrayerScreen> {
                               _isAnonymous = value;
                             });
                           },
-                          activeColor: AppColors.primaryPurpleDeep,
+                          activeThumbColor: AppColors.primaryPurpleDeep,
                         ),
                       ],
                     ),
@@ -911,7 +911,7 @@ class _SubmitPrayerScreenState extends State<SubmitPrayerScreen> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
+                    color: Colors.grey.withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, -2),
                   ),
@@ -927,7 +927,7 @@ class _SubmitPrayerScreenState extends State<SubmitPrayerScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   elevation: 4,
-                  shadowColor: AppColors.primaryPurpleLight.withOpacity(0.5),
+                  shadowColor: AppColors.primaryPurpleLight.withValues(alpha: 0.5),
                 ),
                 child: _isSubmitting
                     ? const SizedBox(

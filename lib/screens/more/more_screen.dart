@@ -316,7 +316,7 @@ class _MoreScreenState extends State<MoreScreen> {
                         color: Colors.white,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -365,7 +365,7 @@ class _MoreScreenState extends State<MoreScreen> {
                     _isLoadingUser ? '' : _getRoleDisplay(),
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
@@ -441,15 +441,15 @@ class _MoreScreenState extends State<MoreScreen> {
             gradient: isSelected
                 ? LinearGradient(
                     colors: [
-                      AppColors.primaryPurpleDeep.withOpacity(0.1),
-                      AppColors.primaryPurpleLight.withOpacity(0.1),
+                      AppColors.primaryPurpleDeep.withValues(alpha: 0.1),
+                      AppColors.primaryPurpleLight.withValues(alpha: 0.1),
                     ],
                   )
                 : null,
             borderRadius: BorderRadius.circular(12),
             border: isSelected
                 ? Border.all(
-                    color: AppColors.primaryPurpleDeep.withOpacity(0.3),
+                    color: AppColors.primaryPurpleDeep.withValues(alpha: 0.3),
                   )
                 : null,
           ),

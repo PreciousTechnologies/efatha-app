@@ -150,13 +150,13 @@ class _CreateLiveStreamScreenState extends State<CreateLiveStreamScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primaryPurpleLight.withOpacity(0.1),
-                      AppColors.primaryPurpleDeep.withOpacity(0.05),
+                      AppColors.primaryPurpleLight.withValues(alpha: 0.1),
+                      AppColors.primaryPurpleDeep.withValues(alpha: 0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: AppColors.primaryPurpleLight.withOpacity(0.3),
+                    color: AppColors.primaryPurpleLight.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(

@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: AppColors.neutralTextMuted.withOpacity(0.1),
+            color: AppColors.neutralTextMuted.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -324,7 +324,7 @@ class _HomeTabState extends State<_HomeTab> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -409,7 +409,7 @@ class _HomeTabState extends State<_HomeTab> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: iconColor, size: 24),
@@ -497,7 +497,7 @@ class _HomeTabState extends State<_HomeTab> {
                                       boxShadow: [
                                         BoxShadow(
                                           color: AppColors.primaryPurpleDeep
-                                              .withOpacity(0.3),
+                                              .withValues(alpha: 0.3),
                                           blurRadius: 6,
                                           offset: const Offset(0, 2),
                                         ),
@@ -553,7 +553,7 @@ class _HomeTabState extends State<_HomeTab> {
                                       height: 44,
                                       decoration: BoxDecoration(
                                         color: AppColors.primaryPurpleDeep
-                                            .withOpacity(0.1),
+                                            .withValues(alpha: 0.1),
                                         shape: BoxShape.circle,
                                       ),
                                       child: Icon(
@@ -602,7 +602,7 @@ class _HomeTabState extends State<_HomeTab> {
                                   boxShadow: [
                                     BoxShadow(
                                       color: AppColors.primaryPurpleDeep
-                                          .withOpacity(0.3),
+                                          .withValues(alpha: 0.3),
                                       blurRadius: 8,
                                       offset: const Offset(0, 3),
                                     ),
@@ -643,7 +643,7 @@ class _HomeTabState extends State<_HomeTab> {
                                 boxShadow: [
                                   BoxShadow(
                                     color: AppColors.primaryPurpleDeep
-                                        .withOpacity(0.2),
+                                        .withValues(alpha: 0.2),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
@@ -869,7 +869,7 @@ class _EnhancedFeaturedBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryPurpleDeep.withOpacity(0.4),
+            color: AppColors.primaryPurpleDeep.withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -886,7 +886,7 @@ class _EnhancedFeaturedBanner extends StatelessWidget {
               height: 150,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
               ),
             ),
           ),
@@ -896,7 +896,7 @@ class _EnhancedFeaturedBanner extends StatelessWidget {
             child: Icon(
               Icons.play_circle_outline,
               size: 120,
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
             ),
           ),
           // Content
@@ -948,7 +948,7 @@ class _EnhancedFeaturedBanner extends StatelessWidget {
                 Text(
                   'Join us for worship and praise',
                   style: AppTextStyles.bodyLarge.copyWith(
-                    color: Colors.white.withOpacity(0.95),
+                    color: Colors.white.withValues(alpha: 0.95),
                     fontSize: 14,
                   ),
                   maxLines: 1,
@@ -1066,7 +1066,7 @@ class _EnhancedStatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1142,7 +1142,7 @@ class _QuickActionsGrid extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.08),
+                  color: Colors.grey.withValues(alpha: 0.08),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -1154,7 +1154,7 @@ class _QuickActionsGrid extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: (action['color'] as Color).withOpacity(0.1),
+                    color: (action['color'] as Color).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -1209,7 +1209,7 @@ class _EnhancedUpcomingEventsList extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withValues(alpha: 0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -1223,7 +1223,7 @@ class _EnhancedUpcomingEventsList extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      (event['color'] as Color).withOpacity(0.7),
+                      (event['color'] as Color).withValues(alpha: 0.7),
                       event['color'] as Color,
                     ],
                   ),
@@ -1269,7 +1269,7 @@ class _EnhancedUpcomingEventsList extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryPurpleDeep.withOpacity(0.1),
+                  color: AppColors.primaryPurpleDeep.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -1319,7 +1319,7 @@ class _EnhancedRecentPrayersList extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withValues(alpha: 0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -1374,8 +1374,8 @@ class _EnhancedRecentPrayersList extends StatelessWidget {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: (prayer['priorityColor'] as Color).withOpacity(
-                        0.15,
+                      color: (prayer['priorityColor'] as Color).withValues(
+                        alpha: 0.15,
                       ),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
@@ -1430,8 +1430,8 @@ class _EnhancedRecentPrayersList extends StatelessWidget {
                         horizontal: 16,
                         vertical: 8,
                       ),
-                      backgroundColor: AppColors.primaryPurpleDeep.withOpacity(
-                        0.1,
+                      backgroundColor: AppColors.primaryPurpleDeep.withValues(
+                        alpha: 0.1,
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),

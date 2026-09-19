@@ -3,7 +3,9 @@ import 'dart:async';
 import 'dart:math' as math;
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/config/supabase_config.dart';
 import '../core/services/api_service.dart';
+import '../core/services/supabase_auth_service.dart';
 import 'welcome/welcome_screen.dart';
 import 'home/home_screen.dart';
 
@@ -117,10 +119,21 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     try {
-      final apiService = ApiService();
-
-      // Check if user is authenticated (validates token and refreshes if needed)
-      final isAuthenticated = await apiService.isAuthenticated();
+      // Supabase-first: active session wins. Django JWT is the fallback
+      // until all screens are migrated (see SUPABASE_MIGRATION_GUIDE.md).
+      bool isAuthenticated = false;
+      if (SupabaseConfig.isConfigured) {
+        try {
+          isAuthenticated = SupabaseAuthService().isSignedIn;
+        } catch (_) {
+          isAuthenticated = false;
+        }
+      }
+      if (!isAuthenticated) {
+        final apiService = ApiService();
+        // Check if user is authenticated (validates token and refreshes if needed)
+        isAuthenticated = await apiService.isAuthenticated();
+      }
 
       if (!mounted) return;
 
@@ -221,14 +234,14 @@ class _SplashScreenState extends State<SplashScreen>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.white.withOpacity(
-                            _logoGlowAnimation.value * 0.5,
+                          color: Colors.white.withValues(
+                            alpha: _logoGlowAnimation.value * 0.5,
                           ),
                           blurRadius: 30 * _logoGlowAnimation.value,
                           spreadRadius: 10 * _logoGlowAnimation.value,
                         ),
                         BoxShadow(
-                          color: AppColors.primaryPurpleLight.withOpacity(0.4),
+                          color: AppColors.primaryPurpleLight.withValues(alpha: 0.4),
                           blurRadius: 40,
                           offset: const Offset(0, 15),
                         ),
@@ -239,7 +252,7 @@ class _SplashScreenState extends State<SplashScreen>
                         color: Colors.white,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           width: 3,
                         ),
                       ),
@@ -276,7 +289,7 @@ class _SplashScreenState extends State<SplashScreen>
                                       colors: [
                                         Colors.transparent,
                                         Colors.transparent,
-                                        Colors.white.withOpacity(0.6),
+                                        Colors.white.withValues(alpha: 0.6),
                                         Colors.transparent,
                                         Colors.transparent,
                                       ],
@@ -326,7 +339,7 @@ class _SplashScreenState extends State<SplashScreen>
                       colors: [
                         Colors.white,
                         Colors.white,
-                        Colors.white.withOpacity(0.5),
+                        Colors.white.withValues(alpha: 0.5),
                         Colors.white,
                         Colors.white,
                       ],
@@ -341,7 +354,7 @@ class _SplashScreenState extends State<SplashScreen>
                       letterSpacing: 4,
                       shadows: [
                         Shadow(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withValues(alpha: 0.3),
                           offset: const Offset(0, 4),
                           blurRadius: 8,
                         ),
@@ -356,7 +369,7 @@ class _SplashScreenState extends State<SplashScreen>
             Text(
               'Church Community',
               style: AppTextStyles.titleMedium.copyWith(
-                color: Colors.white.withOpacity(0.95),
+                color: Colors.white.withValues(alpha: 0.95),
                 letterSpacing: 2,
                 fontSize: 16,
                 fontWeight: FontWeight.w300,
@@ -367,17 +380,17 @@ class _SplashScreenState extends State<SplashScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
               child: Text(
                 'Connect • Worship • Grow',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 12,
                   letterSpacing: 1.5,
                   fontWeight: FontWeight.w400,
@@ -403,8 +416,8 @@ class _SplashScreenState extends State<SplashScreen>
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.white.withOpacity(
-                    _logoGlowAnimation.value * 0.3,
+                  color: Colors.white.withValues(
+                    alpha: _logoGlowAnimation.value * 0.3,
                   ),
                   blurRadius: 20 * _logoGlowAnimation.value,
                   spreadRadius: 5 * _logoGlowAnimation.value,
@@ -414,7 +427,7 @@ class _SplashScreenState extends State<SplashScreen>
             child: CircularProgressIndicator(
               strokeWidth: 3,
               valueColor: AlwaysStoppedAnimation<Color>(
-                Colors.white.withOpacity(0.8),
+                Colors.white.withValues(alpha: 0.8),
               ),
             ),
           );
@@ -530,11 +543,11 @@ class _FloatingParticleState extends State<FloatingParticle>
               width: size,
               height: size,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.6),
+                color: Colors.white.withValues(alpha: 0.6),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     blurRadius: 4,
                     spreadRadius: 1,
                   ),

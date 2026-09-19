@@ -2,7 +2,7 @@
 class ApiConfig {
   // Backend URL - Update this with your computer's IP address
   static const String baseUrl =
-      'http://192.168.1.101:8000'; // Your computer's IP
+      'http://192.168.1.100:8000'; // Your computer's IP
   static const String apiUrl = '$baseUrl/api';
 
   // Endpoints
@@ -38,3 +38,4 @@ class ApiConfig {
   static const Duration connectionTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
 }
+

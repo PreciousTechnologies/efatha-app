@@ -8,7 +8,6 @@ plugins {
 android {
     namespace = "com.example.efatha_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -42,3 +41,5 @@ android {
 flutter {
     source = "../.."
 }
+
+

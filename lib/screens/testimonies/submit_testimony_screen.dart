@@ -326,8 +326,8 @@ class _SubmitTestimonyScreenState extends State<SubmitTestimonyScreen> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        AppColors.primaryPurpleLight.withOpacity(0.2),
-                        AppColors.primaryPurpleVibrant.withOpacity(0.1),
+                        AppColors.primaryPurpleLight.withValues(alpha: 0.2),
+                        AppColors.primaryPurpleVibrant.withValues(alpha: 0.1),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(12),
@@ -555,7 +555,7 @@ class _SubmitTestimonyScreenState extends State<SubmitTestimonyScreen> {
                             _isSundayService = value;
                           });
                         },
-                        activeColor: AppColors.primaryPurpleDeep,
+                        activeThumbColor: AppColors.primaryPurpleDeep,
                       ),
                     ],
                   ),
@@ -702,7 +702,7 @@ class _SubmitTestimonyScreenState extends State<SubmitTestimonyScreen> {
                       onChanged: (value) {
                         setState(() => _isAnonymous = value);
                       },
-                      activeColor: AppColors.primaryPurpleDeep,
+                      activeThumbColor: AppColors.primaryPurpleDeep,
                     ),
                   ],
                 ),

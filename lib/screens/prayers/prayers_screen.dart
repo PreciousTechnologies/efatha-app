@@ -239,8 +239,8 @@ class _PrayersScreenState extends State<PrayersScreen> {
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primaryPurpleLight.withOpacity(
-                              0.3,
+                            color: AppColors.primaryPurpleLight.withValues(
+                              alpha: 0.3,
                             ),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
@@ -337,8 +337,8 @@ class _PrayersScreenState extends State<PrayersScreen> {
                         _loadPrayers();
                       },
                       backgroundColor: Colors.white,
-                      selectedColor: AppColors.primaryPurpleLight.withOpacity(
-                        0.2,
+                      selectedColor: AppColors.primaryPurpleLight.withValues(
+                        alpha: 0.2,
                       ),
                       checkmarkColor: AppColors.primaryPurpleDeep,
                       labelStyle: TextStyle(
@@ -356,8 +356,8 @@ class _PrayersScreenState extends State<PrayersScreen> {
                         width: isSelected ? 2 : 1,
                       ),
                       elevation: isSelected ? 2 : 0,
-                      shadowColor: AppColors.primaryPurpleLight.withOpacity(
-                        0.3,
+                      shadowColor: AppColors.primaryPurpleLight.withValues(
+                        alpha: 0.3,
                       ),
                     );
                   },
@@ -521,7 +521,7 @@ class _PrayerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 0,
             blurRadius: 10,
             offset: const Offset(0, 4),
@@ -560,7 +560,7 @@ class _PrayerCard extends StatelessWidget {
                         : null,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primaryPurpleLight.withOpacity(0.3),
+                        color: AppColors.primaryPurpleLight.withValues(alpha: 0.3),
                         spreadRadius: 0,
                         blurRadius: 8,
                         offset: const Offset(0, 2),
@@ -614,14 +614,14 @@ class _PrayerCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [priorityColor, priorityColor.withOpacity(0.7)],
+                      colors: [priorityColor, priorityColor.withValues(alpha: 0.7)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: priorityColor.withOpacity(0.3),
+                        color: priorityColor.withValues(alpha: 0.3),
                         spreadRadius: 0,
                         blurRadius: 6,
                         offset: const Offset(0, 2),
@@ -717,7 +717,7 @@ class _PrayerCard extends StatelessWidget {
                             ? [
                                 BoxShadow(
                                   color: AppColors.primaryPurpleLight
-                                      .withOpacity(0.3),
+                                      .withValues(alpha: 0.3),
                                   spreadRadius: 0,
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
@@ -748,7 +748,7 @@ class _PrayerCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               color: isPraying
-                                  ? Colors.white.withOpacity(0.9)
+                                  ? Colors.white.withValues(alpha: 0.9)
                                   : Colors.grey[600],
                             ),
                           ),

@@ -97,7 +97,7 @@ class _TestimonyDetailScreenState extends State<TestimonyDetailScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 20,
                         offset: const Offset(0, 4),
                       ),
@@ -124,7 +124,7 @@ class _TestimonyDetailScreenState extends State<TestimonyDetailScreen> {
                                 BoxShadow(
                                   color: _getCategoryColors(
                                     category,
-                                  )[0].withOpacity(0.3),
+                                  )[0].withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -173,7 +173,7 @@ class _TestimonyDetailScreenState extends State<TestimonyDetailScreen> {
                                   BoxShadow(
                                     color: const Color(
                                       0xFFFFD700,
-                                    ).withOpacity(0.3),
+                                    ).withValues(alpha: 0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -228,7 +228,7 @@ class _TestimonyDetailScreenState extends State<TestimonyDetailScreen> {
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
+                                        color: Colors.black.withValues(alpha: 0.1),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
                                       ),
@@ -254,7 +254,7 @@ class _TestimonyDetailScreenState extends State<TestimonyDetailScreen> {
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.blue.withOpacity(0.3),
+                                        color: Colors.blue.withValues(alpha: 0.3),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
                                       ),
@@ -353,13 +353,13 @@ class _TestimonyDetailScreenState extends State<TestimonyDetailScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.primaryPurpleLight.withOpacity(0.1),
-                          AppColors.primaryPurpleVibrant.withOpacity(0.05),
+                          AppColors.primaryPurpleLight.withValues(alpha: 0.1),
+                          AppColors.primaryPurpleVibrant.withValues(alpha: 0.05),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: AppColors.primaryPurpleLight.withOpacity(0.3),
+                        color: AppColors.primaryPurpleLight.withValues(alpha: 0.3),
                         width: 1.5,
                       ),
                     ),
@@ -377,8 +377,8 @@ class _TestimonyDetailScreenState extends State<TestimonyDetailScreen> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primaryPurpleDeep.withOpacity(
-                                  0.3,
+                                color: AppColors.primaryPurpleDeep.withValues(
+                                  alpha: 0.3,
                                 ),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
@@ -477,7 +477,7 @@ class _TestimonyDetailScreenState extends State<TestimonyDetailScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 20,
                         offset: const Offset(0, 4),
                       ),
@@ -542,7 +542,7 @@ class _TestimonyDetailScreenState extends State<TestimonyDetailScreen> {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: gradient.colors[0].withOpacity(0.3),
+              color: gradient.colors[0].withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),

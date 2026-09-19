@@ -52,10 +52,10 @@ class PesapalService {
   static const String _consumerSecretSandbox = 'osGQ364R49cXKeOYSpaOnT++rHs=';
 
   // Active credentials based on environment
-  String _consumerKey = _environment == 'sandbox'
+  final String _consumerKey = _environment == 'sandbox'
       ? _consumerKeySandbox
       : _consumerKeyLive;
-  String _consumerSecret = _environment == 'sandbox'
+  final String _consumerSecret = _environment == 'sandbox'
       ? _consumerSecretSandbox
       : _consumerSecretLive;
   String? _accessToken;

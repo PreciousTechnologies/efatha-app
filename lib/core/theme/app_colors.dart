@@ -62,16 +62,16 @@ class AppColors {
 
   // Helper method to get color with opacity
   static Color withOpacity(Color color, double opacity) {
-    return color.withOpacity(opacity);
+    return color.withValues(alpha: opacity);
   }
 
   // Helper method for badge backgrounds (12% opacity)
   static Color badgeBackground(Color color) {
-    return color.withOpacity(0.12);
+    return color.withValues(alpha: 0.12);
   }
 
   // Helper method for chip backgrounds (20% opacity)
   static Color chipBackground(Color color) {
-    return color.withOpacity(0.20);
+    return color.withValues(alpha: 0.20);
   }
 }

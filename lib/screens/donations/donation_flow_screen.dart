@@ -287,7 +287,7 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
       final token = await storageService.getAccessToken();
 
       final response = await http.post(
-        Uri.parse('${ApiConfig.apiUrl}/church/givings/verify_payment/'),
+        Uri.parse('${ApiConfig.apiUrl}/church/giving/verify_payment/'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
@@ -438,7 +438,7 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -851,7 +851,7 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
                         _isRecurring = value;
                       });
                     },
-                    activeColor: AppColors.primaryPurpleDeep,
+                    activeThumbColor: AppColors.primaryPurpleDeep,
                   ),
                 ],
               ),
@@ -869,8 +869,8 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
                           _recurringFrequency = freq;
                         });
                       },
-                      selectedColor: AppColors.primaryPurpleLight.withOpacity(
-                        0.3,
+                      selectedColor: AppColors.primaryPurpleLight.withValues(
+                        alpha: 0.3,
                       ),
                       labelStyle: TextStyle(
                         color: isSelected
@@ -955,7 +955,7 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
                     _isAnonymous = value;
                   });
                 },
-                activeColor: AppColors.primaryPurpleDeep,
+                activeThumbColor: AppColors.primaryPurpleDeep,
               ),
             ],
           ),
@@ -1177,7 +1177,7 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.primaryPurpleLight.withOpacity(0.1)
+                      ? AppColors.primaryPurpleLight.withValues(alpha: 0.1)
                       : Colors.grey[50],
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
@@ -1273,7 +1273,7 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primaryPurpleLight.withOpacity(0.3),
+                color: AppColors.primaryPurpleLight.withValues(alpha: 0.3),
                 blurRadius: 15,
                 offset: const Offset(0, 6),
               ),
@@ -1295,7 +1295,7 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.25),
+                        color: Colors.white.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -1431,7 +1431,7 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -1473,7 +1473,7 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 4,
-                shadowColor: AppColors.primaryPurpleLight.withOpacity(0.5),
+                shadowColor: AppColors.primaryPurpleLight.withValues(alpha: 0.5),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,

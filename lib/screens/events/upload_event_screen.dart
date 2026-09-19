@@ -558,7 +558,7 @@ class _UploadEventScreenState extends State<UploadEventScreen> {
 
   Widget _buildCategoryDropdown() {
     return DropdownButtonFormField<String>(
-      value: _selectedCategory,
+      initialValue: _selectedCategory,
       decoration: InputDecoration(
         labelText: 'Event Category',
         prefixIcon: Icon(Icons.category, color: AppColors.primaryPurpleDeep),
@@ -630,7 +630,7 @@ class _UploadEventScreenState extends State<UploadEventScreen> {
             subtitle: const Text('Enable registration for this event'),
             value: _requiresRegistration,
             onChanged: (value) => setState(() => _requiresRegistration = value),
-            activeColor: AppColors.primaryPurpleDeep,
+            activeThumbColor: AppColors.primaryPurpleDeep,
             contentPadding: EdgeInsets.zero,
           ),
           if (_requiresRegistration) ...[

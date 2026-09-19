@@ -171,7 +171,7 @@ class _DonationsScreenState extends State<DonationsScreen> {
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: _showHistory
-                          ? AppColors.primaryPurpleLight.withOpacity(0.2)
+                          ? AppColors.primaryPurpleLight.withValues(alpha: 0.2)
                           : Colors.grey[100],
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -259,7 +259,7 @@ class _DonationsScreenState extends State<DonationsScreen> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF4CAF50).withOpacity(0.3),
+                            color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
                             blurRadius: 15,
                             offset: const Offset(0, 6),
                           ),
@@ -277,7 +277,7 @@ class _DonationsScreenState extends State<DonationsScreen> {
                                     ? "This Week"
                                     : "This Year"}',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.95),
+                                  color: Colors.white.withValues(alpha: 0.95),
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -288,7 +288,7 @@ class _DonationsScreenState extends State<DonationsScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.25),
+                                  color: Colors.white.withValues(alpha: 0.25),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -342,7 +342,7 @@ class _DonationsScreenState extends State<DonationsScreen> {
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
+                                    color: Colors.white.withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Column(
@@ -374,7 +374,7 @@ class _DonationsScreenState extends State<DonationsScreen> {
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
+                                    color: Colors.white.withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Column(
@@ -428,7 +428,7 @@ class _DonationsScreenState extends State<DonationsScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryPurpleLight.withOpacity(0.2),
+                      color: AppColors.primaryPurpleLight.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -557,7 +557,7 @@ class _DonationsScreenState extends State<DonationsScreen> {
                               },
                               backgroundColor: Colors.white,
                               selectedColor: AppColors.primaryPurpleLight
-                                  .withOpacity(0.2),
+                                  .withValues(alpha: 0.2),
                               checkmarkColor: AppColors.primaryPurpleDeep,
                               labelStyle: TextStyle(
                                 color: isSelected
@@ -621,7 +621,7 @@ class _DonationsScreenState extends State<DonationsScreen> {
                                   },
                                   backgroundColor: Colors.white,
                                   selectedColor: AppColors.primaryPurpleLight
-                                      .withOpacity(0.2),
+                                      .withValues(alpha: 0.2),
                                   checkmarkColor: AppColors.primaryPurpleDeep,
                                   labelStyle: TextStyle(
                                     color: isSelected
@@ -759,7 +759,7 @@ class _DonationCategoryCard extends StatelessWidget {
           border: Border.all(color: Colors.grey[200]!),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
+              color: Colors.grey.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -779,7 +779,7 @@ class _DonationCategoryCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: gradient[0].withOpacity(0.3),
+                    color: gradient[0].withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -853,7 +853,7 @@ class _DonationHistoryCard extends StatelessWidget {
         border: Border.all(color: Colors.grey[200]!),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.06),
+            color: Colors.grey.withValues(alpha: 0.06),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

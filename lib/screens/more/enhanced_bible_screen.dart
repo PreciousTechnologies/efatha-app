@@ -31,7 +31,7 @@ class _EnhancedBibleScreenState extends State<EnhancedBibleScreen>
   Set<String> _favoriteVerses = {}; // Format: "Book_Chapter_Verse"
   Map<String, String> _verseColors =
       {}; // Format: "Book_Chapter_Verse" -> color
-  double _fontSize = 16.0;
+  final double _fontSize = 16.0;
   bool _readingMode = false;
 
   // Available highlight colors

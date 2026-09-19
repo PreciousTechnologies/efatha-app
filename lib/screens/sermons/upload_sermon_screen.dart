@@ -591,7 +591,7 @@ class _UploadSermonScreenState extends State<UploadSermonScreen> {
         ],
       ),
       child: DropdownButtonFormField<String>(
-        value: _selectedCategory,
+        initialValue: _selectedCategory,
         validator: (val) => val == null ? 'Category is required' : null,
         decoration: InputDecoration(
           labelText: 'Category',

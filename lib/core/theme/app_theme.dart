@@ -48,7 +48,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: AppColors.neutralBackgroundLightest,
         elevation: 4,
-        shadowColor: AppColors.neutralTextMuted.withOpacity(0.1),
+        shadowColor: AppColors.neutralTextMuted.withValues(alpha: 0.1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       ),
@@ -58,10 +58,10 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryPurpleDeep,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.primaryPurpleDeep.withOpacity(0.5),
-          disabledForegroundColor: Colors.white.withOpacity(0.5),
+          disabledBackgroundColor: AppColors.primaryPurpleDeep.withValues(alpha: 0.5),
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
           elevation: 2,
-          shadowColor: AppColors.primaryPurpleDeep.withOpacity(0.3),
+          shadowColor: AppColors.primaryPurpleDeep.withValues(alpha: 0.3),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           minimumSize: const Size(0, 40),
@@ -159,7 +159,7 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.neutralBackgroundMuted,
         selectedColor: AppColors.primaryPurpleDeep,
-        disabledColor: AppColors.neutralBackgroundMuted.withOpacity(0.5),
+        disabledColor: AppColors.neutralBackgroundMuted.withValues(alpha: 0.5),
         labelStyle: AppTextStyles.bodyMediumWeight,
         secondaryLabelStyle: AppTextStyles.bodyMediumWeight.copyWith(
           color: Colors.white,

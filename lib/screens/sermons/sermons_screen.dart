@@ -34,8 +34,8 @@ class _SermonsScreenState extends State<SermonsScreen> {
   bool _isLoading = true;
   bool _isEditor = false;
   List<Map<String, dynamic>> _sermons = [];
-  Set<String> _availablePastors = {};
-  Set<String> _availableTopics = {};
+  final Set<String> _availablePastors = {};
+  final Set<String> _availableTopics = {};
 
   final List<String> _categories = [
     'all',
@@ -296,7 +296,7 @@ class _SermonsScreenState extends State<SermonsScreen> {
                                   child: InkWell(
                                     onTap: () => _navigateToUpload(),
                                     borderRadius: BorderRadius.circular(12),
-                                    child: Container(
+                                    child: SizedBox(
                                       width: 44,
                                       height: 44,
                                       child: Icon(

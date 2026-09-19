@@ -251,20 +251,25 @@ class StorageService {
     if (userData['church_position'] != null) {
       await setChurchPosition(userData['church_position']);
     }
-    if (userData['first_name'] != null)
+    if (userData['first_name'] != null) {
       await setFirstName(userData['first_name']);
+    }
     if (userData['last_name'] != null) await setLastName(userData['last_name']);
-    if (userData['phone_number'] != null)
+    if (userData['phone_number'] != null) {
       await setPhoneNumber(userData['phone_number']);
+    }
     if (userData['country'] != null) await setCountry(userData['country']);
     if (userData['region'] != null) await setRegion(userData['region']);
-    if (userData['service_region'] != null)
+    if (userData['service_region'] != null) {
       await setServiceRegion(userData['service_region']);
+    }
     if (userData['city'] != null) await setCity(userData['city']);
-    if (userData['registration_number'] != null)
+    if (userData['registration_number'] != null) {
       await setRegistrationNumber(userData['registration_number']);
-    if (userData['membership_number'] != null)
+    }
+    if (userData['membership_number'] != null) {
       await setMembershipNumber(userData['membership_number']);
+    }
     if (userData['bio'] != null) await setBio(userData['bio']);
     if (userData['address'] != null) await setAddress(userData['address']);
     await setLoggedIn(true);

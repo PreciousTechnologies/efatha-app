@@ -68,7 +68,18 @@ class PesapalService:
         token = self.get_access_token()
         if not token:
             return {'error': 'Failed to authenticate with Pesapal'}
-        
+
+        # Derive Pesapal country code from phone prefix (default TZ)
+        digits = ''.join(c for c in str(phone or '') if c.isdigit())
+        if digits.startswith('254'):
+            country_code = 'KE'
+        elif digits.startswith('256'):
+            country_code = 'UG'
+        elif digits.startswith('250'):
+            country_code = 'RW'
+        else:
+            country_code = 'TZ'
+
         order_data = {
             'id': merchant_reference,
             'currency': currency,
@@ -79,7 +90,7 @@ class PesapalService:
             'billing_address': {
                 'email_address': email,
                 'phone_number': phone,
-                'country_code': 'KE',  # Adjust based on phone number
+                'country_code': country_code,
                 'first_name': first_name,
                 'last_name': last_name,
             }

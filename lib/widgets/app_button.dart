@@ -73,8 +73,8 @@ class AppButton extends StatelessWidget {
             backgroundColor: customColor ?? AppColors.primaryPurpleDeep,
             foregroundColor: Colors.white,
             disabledBackgroundColor:
-                (customColor ?? AppColors.primaryPurpleDeep).withOpacity(0.5),
-            disabledForegroundColor: Colors.white.withOpacity(0.5),
+                (customColor ?? AppColors.primaryPurpleDeep).withValues(alpha: 0.5),
+            disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
             padding: padding,
             minimumSize: Size(isFullWidth ? double.infinity : 0, height),
             shape: RoundedRectangleBorder(
@@ -94,8 +94,8 @@ class AppButton extends StatelessWidget {
             backgroundColor: customColor ?? AppColors.accentBlueBrand,
             foregroundColor: Colors.white,
             disabledBackgroundColor: (customColor ?? AppColors.accentBlueBrand)
-                .withOpacity(0.5),
-            disabledForegroundColor: Colors.white.withOpacity(0.5),
+                .withValues(alpha: 0.5),
+            disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
             padding: padding,
             minimumSize: Size(isFullWidth ? double.infinity : 0, height),
             shape: RoundedRectangleBorder(

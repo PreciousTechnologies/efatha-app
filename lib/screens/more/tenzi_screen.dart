@@ -282,7 +282,7 @@ class _TenziScreenState extends State<TenziScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -470,7 +470,7 @@ class _TenziScreenState extends State<TenziScreen>
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
+            color: Colors.grey.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -489,7 +489,7 @@ class _TenziScreenState extends State<TenziScreen>
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryPurpleDeep.withOpacity(0.1),
+                    color: AppColors.primaryPurpleDeep.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -586,7 +586,7 @@ class HymnDetailScreen extends StatelessWidget {
                   child: Icon(
                     Icons.music_note_rounded,
                     size: 80,
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                   ),
                 ),
               ),
@@ -628,7 +628,7 @@ class HymnDetailScreen extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryPurpleDeep.withOpacity(0.1),
+                      color: AppColors.primaryPurpleDeep.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
