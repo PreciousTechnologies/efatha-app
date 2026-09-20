@@ -21,8 +21,9 @@ class EmailVerificationScreen extends StatefulWidget {
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
-  // Supabase email OTP is 6 digits; legacy Django codes were 4.
-  late final int _codeLength = SupabaseConfig.isConfigured ? 6 : 4;
+  // Supabase email OTP length (default 8); legacy Django codes were 4.
+  late final int _codeLength =
+      SupabaseConfig.isConfigured ? SupabaseConfig.emailOtpLength : 4;
   late final List<TextEditingController> _controllers = List.generate(
     _codeLength,
     (index) => TextEditingController(),
@@ -431,11 +432,18 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   }
 
   Widget _buildCodeField(int index) {
-    // 6 Supabase boxes must fit narrow phones — shrink slightly.
-    final boxSize = _codeLength > 4 ? 50.0 : 64.0;
+    // Size boxes to fit any phone: total width minus padding/margins,
+    // divided by box count. Keeps digits large and fully visible.
+    final screenWidth = MediaQuery.of(context).size.width;
+    final boxSize =
+        ((screenWidth - 48 - ((_codeLength - 1) * 8)) / _codeLength).clamp(
+      34.0,
+      64.0,
+    );
+    final fontSize = boxSize >= 52 ? 24.0 : 19.0;
     return Container(
       width: boxSize,
-      height: boxSize + 4,
+      height: boxSize + 8,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -455,22 +463,27 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               ]
             : null,
       ),
-      child: TextField(
-        controller: _controllers[index],
-        focusNode: _focusNodes[index],
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        maxLength: 1,
-        style: const TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: AppColors.neutralTextPrimary,
-        ),
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          counterText: '',
-        ),
+      child: Center(
+        child: TextField(
+          controller: _controllers[index],
+          focusNode: _focusNodes[index],
+          textAlign: TextAlign.center,
+          textAlignVertical: TextAlignVertical.center,
+          keyboardType: TextInputType.number,
+          maxLength: 1,
+          cursorColor: AppColors.primaryPurpleDeep,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+            color: AppColors.neutralTextPrimary,
+            height: 1.0,
+          ),
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            counterText: '',
+            contentPadding: EdgeInsets.zero,
+          ),
         onChanged: (value) {
           if (value.isNotEmpty) {
             // Move to next field
@@ -488,7 +501,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             }
           }
           setState(() {});
-        },
+          },
+        ),
       ),
     );
   }

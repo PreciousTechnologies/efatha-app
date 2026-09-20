@@ -58,6 +58,11 @@ class SupabaseConfig {
   static String get supabaseUrl => _url;
   static String get supabaseAnonKey => _key;
 
+  /// Length of email OTP codes. MUST match Supabase Dashboard →
+  /// Authentication → Providers → Email → OTP length (allowed 6–10,
+  /// minimum 6 — Supabase cannot do 4-digit email codes).
+  static const int emailOtpLength = 6;
+
   static bool get isConfigured =>
       !_url.contains('YOUR-PROJECT-REF') && !_key.contains('YOUR-SUPABASE');
 
