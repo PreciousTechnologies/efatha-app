@@ -240,9 +240,9 @@ class _ReturningUserLoginScreenState extends State<ReturningUserLoginScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
+                      const Expanded(
                         child: Text(
-                          'We\'ll send a ${SupabaseConfig.isConfigured ? SupabaseConfig.emailOtpLength : 4}-digit verification code to your email. Please check your inbox.',
+                          'We\'ll send a verification code to your email. Please check your inbox and enter it below.',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.neutralTextSecondary,

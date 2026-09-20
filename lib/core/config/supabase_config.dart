@@ -58,10 +58,14 @@ class SupabaseConfig {
   static String get supabaseUrl => _url;
   static String get supabaseAnonKey => _key;
 
-  /// Length of email OTP codes. MUST match Supabase Dashboard →
-  /// Authentication → Providers → Email → OTP length (allowed 6–10,
-  /// minimum 6 — Supabase cannot do 4-digit email codes).
-  static const int emailOtpLength = 6;
+  /// Number of code boxes shown. Supabase sends 6–10 digit email codes
+  /// (Cloud default is 8; the length setting is NOT exposed on the hosted
+  /// dashboard), so boxes fit the longest common code and verification
+  /// accepts any 6–8 digit entry. No dashboard change needed.
+  static const int emailOtpLength = 8;
+
+  /// Shortest code the app will submit (Supabase minimum is 6).
+  static const int emailOtpMinLength = 6;
 
   static bool get isConfigured =>
       !_url.contains('YOUR-PROJECT-REF') && !_key.contains('YOUR-SUPABASE');

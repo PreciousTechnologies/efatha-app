@@ -298,7 +298,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'We sent a ${SupabaseConfig.emailOtpLength}-digit code and a confirmation link to $email. '
+              'We sent a verification code and a confirmation link to $email. '
               'Enter the code on the sign-in screen, or tap the link, then sign in.',
               textAlign: TextAlign.center,
               style: const TextStyle(

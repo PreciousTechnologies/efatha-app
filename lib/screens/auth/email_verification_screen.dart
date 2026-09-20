@@ -142,10 +142,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Future<void> _verifyCode() async {
     final enteredCode = _getEnteredCode();
 
-    if (enteredCode.length != _codeLength) {
+    // Accept any Supabase code length (6–8); boxes fit the longest.
+    if (enteredCode.length < SupabaseConfig.emailOtpMinLength) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please enter all $_codeLength digits'),
+        const SnackBar(
+          content: Text('Please enter the full code from your email'),
           backgroundColor: AppColors.warningAmber,
         ),
       );
@@ -354,7 +355,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'We sent a $_codeLength-digit code to',
+                'We sent a code to',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.neutralTextMuted,
@@ -470,7 +471,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           textAlign: TextAlign.center,
           textAlignVertical: TextAlignVertical.center,
           keyboardType: TextInputType.number,
-          maxLength: 1,
+          // No maxLength: multi-char input is treated as a paste and
+          // distributed across boxes in onChanged.
           cursorColor: AppColors.primaryPurpleDeep,
           style: TextStyle(
             fontSize: fontSize,
@@ -485,6 +487,29 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             contentPadding: EdgeInsets.zero,
           ),
         onChanged: (value) {
+          final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+          if (digitsOnly.length > 1) {
+            // Pasted a whole code (e.g. from the email app): spread it
+            // across this and following boxes.
+            final chars = digitsOnly.split('');
+            for (var j = 0;
+                j < chars.length && index + j < _codeLength;
+                j++) {
+              _controllers[index + j].text = chars[j];
+            }
+            final firstEmpty = _controllers.indexWhere(
+              (c) => c.text.isEmpty,
+            );
+            if (firstEmpty == -1) {
+              // All boxes filled, auto-verify
+              _focusNodes[index].unfocus();
+              _verifyCode();
+            } else {
+              _focusNodes[firstEmpty].requestFocus();
+            }
+            setState(() {});
+            return;
+          }
           if (value.isNotEmpty) {
             // Move to next field
             if (index < _codeLength - 1) {
