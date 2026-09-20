@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/supabase_auth_service.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/custom_text_field.dart';
 import 'email_verification_screen.dart';
@@ -45,11 +48,37 @@ class _ReturningUserLoginScreenState extends State<ReturningUserLoginScreen> {
     });
 
     try {
+      final email = _emailController.text.trim();
+
+      // Supabase-first: email OTP (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        try {
+          await SupabaseAuthService().sendOtp(
+            email: email,
+            shouldCreateUser: false,
+          );
+        } on AuthException catch (e) {
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(SupabaseAuthService.friendlyError(e.message)),
+              backgroundColor: AppColors.dangerRedPrimary,
+            ),
+          );
+          return;
+        }
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        _goToVerification(email, 'Verification code sent to your email');
+        return;
+      }
+
       final apiService = ApiService();
 
       // Send verification code via API
       final response = await apiService.sendVerificationCode(
-        email: _emailController.text.trim(),
+        email: email,
         purpose: 'login',
       );
 
@@ -60,22 +89,9 @@ class _ReturningUserLoginScreenState extends State<ReturningUserLoginScreen> {
       });
 
       if (response['success']) {
-        // Navigate to verification screen
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) =>
-                EmailVerificationScreen(email: _emailController.text.trim()),
-          ),
-        );
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              response['message'] ?? 'Verification code sent to your email',
-            ),
-            backgroundColor: Colors.green,
-          ),
+        _goToVerification(
+          email,
+          response['message'] ?? 'Verification code sent to your email',
         );
       } else {
         // Show error message
@@ -100,6 +116,20 @@ class _ReturningUserLoginScreenState extends State<ReturningUserLoginScreen> {
         ),
       );
     }
+  }
+
+  void _goToVerification(String email, String message) {
+    // Navigate to verification screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => EmailVerificationScreen(email: email),
+      ),
+    );
+
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
   }
 
   @override
@@ -212,7 +242,7 @@ class _ReturningUserLoginScreenState extends State<ReturningUserLoginScreen> {
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
-                          'We\'ll send a 4-digit verification code to your email. Please check your inbox.',
+                          'We\'ll send a 6-digit verification code to your email. Please check your inbox.',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.neutralTextSecondary,

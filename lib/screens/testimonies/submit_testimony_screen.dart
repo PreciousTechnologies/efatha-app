@@ -1,15 +1,21 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
+import '../../core/services/supabase_storage_service.dart';
 
 /// Submit Testimony Screen - Create new testimony with photo/video upload
 class SubmitTestimonyScreen extends StatefulWidget {
-  final int? prayerRequestId;
+  // Django ids are int, Supabase ids are uuid strings.
+  final dynamic prayerRequestId;
   final String? prayerRequestTitle;
   final Map<String, dynamic>? testimonyData; // For editing
 
@@ -78,7 +84,20 @@ class _SubmitTestimonyScreenState extends State<SubmitTestimonyScreen> {
   }
 
   Future<void> _loadUserRole() async {
+    // Supabase-first (Django fallback while migrating).
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final profile = await SupabaseAuthService().getCurrentProfile();
+        if (profile != null && mounted) {
+          setState(() {
+            _userRole = profile['role']?.toString();
+          });
+          return;
+        }
+      } catch (_) {}
+    }
     final role = await _storage.getUserRole();
+    if (!mounted) return;
     setState(() {
       _userRole = role;
     });
@@ -180,6 +199,12 @@ class _SubmitTestimonyScreenState extends State<SubmitTestimonyScreen> {
     setState(() => _isSubmitting = true);
 
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        await _submitSupabase();
+        return;
+      }
+
       final token = await _storage.getAccessToken();
       if (token == null) {
         _showError('Please log in again');
@@ -255,6 +280,83 @@ class _SubmitTestimonyScreenState extends State<SubmitTestimonyScreen> {
     } catch (e) {
       setState(() => _isSubmitting = false);
       _showError('Error: ${e.toString()}');
+    }
+  }
+
+  /// Submit via Supabase: insert/update row, upload media, save URLs back.
+  Future<void> _submitSupabase() async {
+    try {
+      final db = SupabaseDatabaseService();
+      final storage = SupabaseStorageService();
+      final uid = SupabaseAuthService().currentUser?.id;
+      if (uid == null) {
+        _showError('Please log in again');
+        return;
+      }
+
+      final fields = <String, dynamic>{
+        'title': _titleController.text.trim(),
+        'content': _contentController.text.trim(),
+        'category': _selectedCategory,
+        'is_anonymous': _isAnonymous,
+        'testimony_type': _isSundayService ? 'sunday_service' : 'regular',
+        if (isLinkedToPrayer)
+          'prayer_request_id': widget.prayerRequestId.toString(),
+      };
+
+      late final String testimonyId;
+      if (isEditing) {
+        testimonyId = widget.testimonyData!['id'].toString();
+        await db.update(
+          SupabaseConfig.testimoniesTable,
+          testimonyId,
+          fields,
+        );
+      } else {
+        final row = await db.insert(SupabaseConfig.testimoniesTable, {
+          ...fields,
+          'user_id': uid,
+        });
+        testimonyId = row['id'].toString();
+      }
+
+      final urls = <String, String>{};
+      if (_selectedPhoto != null) {
+        urls['photo_url'] = await storage.uploadTestimonyFile(
+          testimonyId: testimonyId,
+          kind: 'photo',
+          file: File(_selectedPhoto!.path),
+        );
+      }
+      if (_selectedThumbnail != null) {
+        urls['thumbnail_url'] = await storage.uploadTestimonyFile(
+          testimonyId: testimonyId,
+          kind: 'thumbnail',
+          file: File(_selectedThumbnail!.path),
+        );
+      }
+      if (_selectedVideo != null && _selectedVideo!.path != null) {
+        urls['video_url'] = await storage.uploadTestimonyFile(
+          testimonyId: testimonyId,
+          kind: 'video',
+          file: File(_selectedVideo!.path!),
+        );
+      }
+      if (urls.isNotEmpty) {
+        await db.update(SupabaseConfig.testimoniesTable, testimonyId, urls);
+      }
+
+      if (!mounted) return;
+      _showSuccess(
+        isEditing
+            ? 'Testimony updated successfully!'
+            : 'Testimony submitted successfully! It will be visible after approval.',
+      );
+      Navigator.pop(context, true); // Return true to indicate success
+    } catch (e) {
+      _showError('Error: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 

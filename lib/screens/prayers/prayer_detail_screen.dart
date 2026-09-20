@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
 import '../../widgets/image_viewer.dart';
 import 'package:intl/intl.dart';
 
@@ -21,6 +24,7 @@ class PrayerDetailScreen extends StatefulWidget {
 class _PrayerDetailScreenState extends State<PrayerDetailScreen> {
   final _commentController = TextEditingController();
   final StorageService _storage = StorageService();
+  final SupabaseDatabaseService _supabaseDb = SupabaseDatabaseService();
 
   bool _isPraying = false;
   bool _isSubmittingComment = false;
@@ -34,6 +38,7 @@ class _PrayerDetailScreenState extends State<PrayerDetailScreen> {
     _isPraying = _prayerData['is_praying'] ?? false;
     _loadUserData();
     _loadComments();
+    _loadImages();
   }
 
   @override
@@ -46,8 +51,39 @@ class _PrayerDetailScreenState extends State<PrayerDetailScreen> {
     await _storage.getUserId();
   }
 
+  String? get _supabaseUid => SupabaseAuthService().currentUser?.id;
+
+  /// Supabase rows don't embed images — fetch them (Django embedded them).
+  Future<void> _loadImages() async {
+    if (!SupabaseConfig.isConfigured) return;
+    if ((_prayerData['images'] as List?)?.isNotEmpty == true) return;
+    try {
+      final images = await _supabaseDb.getPrayerImages(
+        _prayerData['id'].toString(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _prayerData['images'] = images;
+      });
+    } catch (e) {
+      print('Error loading prayer images: $e');
+    }
+  }
+
   Future<void> _loadComments() async {
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        final comments = await _supabaseDb.getPrayerComments(
+          _prayerData['id'].toString(),
+        );
+        if (!mounted) return;
+        setState(() {
+          _comments = comments;
+        });
+        return;
+      }
+
       final token = await _storage.getAccessToken();
       if (token == null) return;
 
@@ -60,6 +96,7 @@ class _PrayerDetailScreenState extends State<PrayerDetailScreen> {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        if (!mounted) return;
         setState(() {
           _comments = data is List ? data : (data['results'] ?? []);
         });
@@ -71,6 +108,37 @@ class _PrayerDetailScreenState extends State<PrayerDetailScreen> {
 
   Future<void> _togglePray() async {
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        final uid = _supabaseUid;
+        if (uid == null) {
+          _showError('Please log in again');
+          return;
+        }
+        await _supabaseDb.togglePray(_prayerData['id'].toString(), uid);
+        if (!mounted) return;
+        final newIsPraying = !_isPraying;
+        setState(() {
+          _isPraying = newIsPraying;
+          _prayerData['prayer_count'] =
+              ((_prayerData['prayer_count'] as num?) ?? 0) +
+              (newIsPraying ? 1 : -1);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              newIsPraying
+                  ? "You're praying for this request"
+                  : 'Prayer removed',
+            ),
+            backgroundColor: newIsPraying
+                ? AppColors.primaryPurpleDeep
+                : Colors.grey[700],
+          ),
+        );
+        return;
+      }
+
       final token = await _storage.getAccessToken();
       if (token == null) {
         _showError('Please log in again');
@@ -118,6 +186,34 @@ class _PrayerDetailScreenState extends State<PrayerDetailScreen> {
     setState(() => _isSubmittingComment = true);
 
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        final uid = _supabaseUid;
+        if (uid == null) {
+          _showError('Please log in again');
+          setState(() => _isSubmittingComment = false);
+          return;
+        }
+        await _supabaseDb.addPrayerComment(
+          prayerId: _prayerData['id'].toString(),
+          userId: uid,
+          content: _commentController.text.trim(),
+        );
+        if (!mounted) return;
+        _commentController.clear();
+        setState(() => _isSubmittingComment = false);
+        await _loadComments();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Comment added successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        return;
+      }
+
       final token = await _storage.getAccessToken();
       if (token == null) {
         _showError('Please log in again');

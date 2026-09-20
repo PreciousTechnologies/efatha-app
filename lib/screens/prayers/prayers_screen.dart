@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
 import 'submit_prayer_screen.dart';
 import 'prayer_detail_screen.dart';
 import '../testimonies/submit_testimony_screen.dart';
@@ -22,6 +25,7 @@ class PrayersScreen extends StatefulWidget {
 
 class _PrayersScreenState extends State<PrayersScreen> {
   final StorageService _storage = StorageService();
+  final SupabaseDatabaseService _supabaseDb = SupabaseDatabaseService();
 
   String _selectedFilter = 'All';
   final List<String> _filters = [
@@ -33,7 +37,8 @@ class _PrayersScreenState extends State<PrayersScreen> {
 
   List<Map<String, dynamic>> _prayers = [];
   bool _isLoading = true;
-  int? _currentUserId;
+  int? _currentUserId; // Django int id (fallback path)
+  String? _supabaseUid; // Supabase uuid (primary path)
 
   @override
   void initState() {
@@ -43,7 +48,18 @@ class _PrayersScreenState extends State<PrayersScreen> {
   }
 
   Future<void> _loadUserData() async {
+    // Supabase-first (Django fallback while migrating).
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final uid = SupabaseAuthService().currentUser?.id;
+        if (uid != null && mounted) {
+          setState(() => _supabaseUid = uid);
+          return;
+        }
+      } catch (_) {}
+    }
     final userId = await _storage.getUserId();
+    if (!mounted) return;
     setState(() {
       _currentUserId = userId;
     });
@@ -53,6 +69,33 @@ class _PrayersScreenState extends State<PrayersScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        String? priority;
+        String? mineUid;
+        if (_selectedFilter == 'Urgent') {
+          priority = 'URGENT';
+        } else if (_selectedFilter == 'High Priority') {
+          priority = 'HIGH';
+        } else if (_selectedFilter == 'My Prayers') {
+          mineUid = _supabaseUid ?? SupabaseAuthService().currentUser?.id;
+        }
+        final rows = await _supabaseDb.getPrayerRequests(
+          priority: priority,
+          userId: mineUid,
+        );
+        final enriched = await _supabaseDb.enrichPrayers(
+          rows,
+          currentUid: _supabaseUid ?? SupabaseAuthService().currentUser?.id,
+        );
+        if (!mounted) return;
+        setState(() {
+          _prayers = enriched;
+          _isLoading = false;
+        });
+        return;
+      }
+
       final token = await _storage.getAccessToken();
       if (token == null) {
         _showError('Please log in again');
@@ -101,7 +144,7 @@ class _PrayersScreenState extends State<PrayersScreen> {
     }
   }
 
-  Future<void> _deletePrayer(int prayerId) async {
+  Future<void> _deletePrayer(dynamic prayerId) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -126,6 +169,18 @@ class _PrayersScreenState extends State<PrayersScreen> {
     if (confirmed != true) return;
 
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        await _supabaseDb.delete(
+          SupabaseConfig.prayerRequestsTable,
+          prayerId,
+        );
+        if (!mounted) return;
+        _showSuccess('Prayer request deleted successfully');
+        _loadPrayers(); // Reload list
+        return;
+      }
+
       final token = await _storage.getAccessToken();
       if (token == null) {
         _showError('Please log in again');
@@ -152,6 +207,37 @@ class _PrayersScreenState extends State<PrayersScreen> {
     final prayer = _prayers[index];
 
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        final uid =
+            _supabaseUid ?? SupabaseAuthService().currentUser?.id;
+        if (uid == null) {
+          _showError('Please log in again');
+          return;
+        }
+        final wasPraying = prayer['is_praying'] == true;
+        await _supabaseDb.togglePray(prayer['id'].toString(), uid);
+        if (!mounted) return;
+        setState(() {
+          _prayers[index]['is_praying'] = !wasPraying;
+          _prayers[index]['prayer_count'] =
+              ((_prayers[index]['prayer_count'] as num?) ?? 0) +
+              (!wasPraying ? 1 : -1);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              !wasPraying ? "You're praying for this request" : 'Prayer removed',
+            ),
+            duration: const Duration(seconds: 2),
+            backgroundColor: !wasPraying
+                ? AppColors.primaryPurpleDeep
+                : Colors.grey[700],
+          ),
+        );
+        return;
+      }
+
       final token = await _storage.getAccessToken();
       if (token == null) {
         _showError('Please log in again');
@@ -407,9 +493,12 @@ class _PrayersScreenState extends State<PrayersScreen> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final prayer = _prayers[index];
+                    // Django rows carry int `user`; Supabase rows carry uuid `user_id`.
                     final isMyPrayer =
-                        _currentUserId != null &&
-                        prayer['user'] == _currentUserId;
+                        (_currentUserId != null &&
+                            prayer['user'] == _currentUserId) ||
+                        (_supabaseUid != null &&
+                            prayer['user_id']?.toString() == _supabaseUid);
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),

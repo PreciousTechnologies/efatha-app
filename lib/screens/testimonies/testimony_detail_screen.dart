@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
 import '../../widgets/image_viewer.dart';
 import '../../widgets/testimony_video_player.dart';
 import 'package:share_plus/share_plus.dart';
@@ -640,13 +643,63 @@ class _TestimonyDetailScreenState extends State<TestimonyDetailScreen> {
     }
   }
 
+  void _revertPraise(bool wasPraised) {
+    if (!mounted) return;
+    setState(() {
+      testimony['user_has_praised'] = wasPraised;
+      testimony['praise_count'] =
+          ((testimony['praise_count'] as num?) ?? 0) + (wasPraised ? 1 : -1);
+    });
+  }
+
   // Handle Praise action
   Future<void> _handlePraise() async {
     try {
+      final testimonyId = testimony['id'];
+      final isPraised = testimony['user_has_praised'] == true;
+
+      // Optimistically update UI
+      setState(() {
+        testimony['user_has_praised'] = !isPraised;
+        testimony['praise_count'] =
+            ((testimony['praise_count'] as num?) ?? 0) + (isPraised ? -1 : 1);
+      });
+
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        final uid = SupabaseAuthService().currentUser?.id;
+        if (uid == null) {
+          _revertPraise(isPraised);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please log in to praise testimonies'),
+              ),
+            );
+          }
+          return;
+        }
+        try {
+          await SupabaseDatabaseService().togglePraise(
+            testimonyId.toString(),
+            uid,
+          );
+        } catch (_) {
+          _revertPraise(isPraised);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to update praise')),
+            );
+          }
+        }
+        return;
+      }
+
       final storageService = StorageService();
       final token = await storageService.getAccessToken();
 
       if (token == null) {
+        _revertPraise(isPraised);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -656,16 +709,6 @@ class _TestimonyDetailScreenState extends State<TestimonyDetailScreen> {
         }
         return;
       }
-
-      final testimonyId = testimony['id'];
-      final isPraised = testimony['user_has_praised'] == true;
-
-      // Optimistically update UI
-      setState(() {
-        testimony['user_has_praised'] = !isPraised;
-        testimony['praise_count'] =
-            (testimony['praise_count'] ?? 0) + (isPraised ? -1 : 1);
-      });
 
       final response = await http.post(
         Uri.parse('${ApiConfig.testimonies}$testimonyId/praise/'),

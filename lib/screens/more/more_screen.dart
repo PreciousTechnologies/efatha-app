@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
 import '../../core/config/api_config.dart';
 import '../welcome/welcome_screen.dart';
 import 'profile_section.dart';
@@ -36,6 +38,22 @@ class _MoreScreenState extends State<MoreScreen> {
 
   Future<void> _loadUserData() async {
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        try {
+          final profile = await SupabaseAuthService().getCurrentProfile();
+          if (profile != null && mounted) {
+            setState(() {
+              _userData = profile;
+              _isLoadingUser = false;
+            });
+            return;
+          }
+        } catch (_) {
+          // Fall through to Django.
+        }
+      }
+
       // Try to get user data from storage first
       final storedData = await _storageService.getUserData();
 
@@ -561,6 +579,13 @@ class _MoreScreenState extends State<MoreScreen> {
               try {
                 final apiService = ApiService();
                 final storageService = StorageService();
+
+                // Sign out of Supabase too (hybrid mode).
+                if (SupabaseConfig.isConfigured) {
+                  try {
+                    await SupabaseAuthService().signOut();
+                  } catch (_) {}
+                }
 
                 // Call logout API
                 await apiService.logout();

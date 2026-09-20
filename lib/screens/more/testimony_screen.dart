@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
 import '../testimonies/submit_testimony_screen.dart';
 import '../testimonies/testimony_detail_screen.dart';
 import 'package:intl/intl.dart';
@@ -25,9 +28,12 @@ class _TestimonyScreenState extends State<TestimonyScreen> {
     'My Testimonies',
   ];
 
+  final SupabaseDatabaseService _supabaseDb = SupabaseDatabaseService();
+
   List<Map<String, dynamic>> _testimonies = [];
   bool _isLoading = true;
-  int? _currentUserId;
+  int? _currentUserId; // Django int id (fallback path)
+  String? _supabaseUid; // Supabase uuid (primary path)
 
   @override
   void initState() {
@@ -35,9 +41,29 @@ class _TestimonyScreenState extends State<TestimonyScreen> {
     _loadUserData();
   }
 
+  String? get _effectiveUid =>
+      _supabaseUid ?? SupabaseAuthService().currentUser?.id;
+
+  /// Ownership check across backends (int `user` vs uuid `user_id`).
+  bool _isMine(Map<String, dynamic> t) =>
+      (_currentUserId != null && t['user'] == _currentUserId) ||
+      (_supabaseUid != null && t['user_id']?.toString() == _supabaseUid);
+
   Future<void> _loadUserData() async {
+    // Supabase-first (Django fallback while migrating).
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final uid = SupabaseAuthService().currentUser?.id;
+        if (uid != null && mounted) {
+          setState(() => _supabaseUid = uid);
+          _loadTestimonies();
+          return;
+        }
+      } catch (_) {}
+    }
     final storageService = StorageService();
     final userId = await storageService.getUserId();
+    if (!mounted) return;
     setState(() => _currentUserId = userId);
     _loadTestimonies();
   }
@@ -46,6 +72,21 @@ class _TestimonyScreenState extends State<TestimonyScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        final rows = await _supabaseDb.getTestimonies();
+        final enriched = await _supabaseDb.enrichTestimonies(
+          rows,
+          currentUid: _effectiveUid,
+        );
+        if (!mounted) return;
+        setState(() {
+          _testimonies = enriched;
+          _isLoading = false;
+        });
+        return;
+      }
+
       final storageService = StorageService();
       final token = await storageService.getAccessToken();
       final response = await http.get(
@@ -105,10 +146,10 @@ class _TestimonyScreenState extends State<TestimonyScreen> {
     }
     if (_selectedFilter == 'Featured') {
       // Show all testimonies from other people (excluding current user's testimonies)
-      return _testimonies.where((t) => t['user'] != _currentUserId).toList();
+      return _testimonies.where((t) => !_isMine(t)).toList();
     }
     if (_selectedFilter == 'My Testimonies') {
-      return _testimonies.where((t) => t['user'] == _currentUserId).toList();
+      return _testimonies.where((t) => _isMine(t)).toList();
     }
     // Default - show all
     return _testimonies;
@@ -877,13 +918,60 @@ class _TestimonyScreenState extends State<TestimonyScreen> {
     );
   }
 
+  void _revertPraise(Map<String, dynamic> testimony, bool wasPraised) {
+    if (!mounted) return;
+    setState(() {
+      testimony['user_has_praised'] = wasPraised;
+      testimony['praise_count'] =
+          ((testimony['praise_count'] as num?) ?? 0) + (wasPraised ? 1 : -1);
+    });
+  }
+
   // Handle Praise action
   Future<void> _handlePraise(Map<String, dynamic> testimony) async {
     try {
+      final testimonyId = testimony['id'];
+      final isPraised = testimony['user_has_praised'] == true;
+
+      // Optimistically update UI
+      setState(() {
+        testimony['user_has_praised'] = !isPraised;
+        testimony['praise_count'] =
+            ((testimony['praise_count'] as num?) ?? 0) + (isPraised ? -1 : 1);
+      });
+
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        final uid = _effectiveUid;
+        if (uid == null) {
+          _revertPraise(testimony, isPraised);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please log in to praise testimonies'),
+              ),
+            );
+          }
+          return;
+        }
+        try {
+          await _supabaseDb.togglePraise(testimonyId.toString(), uid);
+        } catch (_) {
+          _revertPraise(testimony, isPraised);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to update praise')),
+            );
+          }
+        }
+        return;
+      }
+
       final storageService = StorageService();
       final token = await storageService.getAccessToken();
 
       if (token == null) {
+        _revertPraise(testimony, isPraised);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -893,16 +981,6 @@ class _TestimonyScreenState extends State<TestimonyScreen> {
         }
         return;
       }
-
-      final testimonyId = testimony['id'];
-      final isPraised = testimony['user_has_praised'] == true;
-
-      // Optimistically update UI
-      setState(() {
-        testimony['user_has_praised'] = !isPraised;
-        testimony['praise_count'] =
-            (testimony['praise_count'] ?? 0) + (isPraised ? -1 : 1);
-      });
 
       final response = await http.post(
         Uri.parse('${ApiConfig.testimonies}$testimonyId/praise/'),

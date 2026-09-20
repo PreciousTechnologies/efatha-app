@@ -52,6 +52,7 @@ dependencies:
   crypto: ^3.0.3
   youtube_player_flutter: ^9.0.3
   supabase_flutter: ^2.8.0
+  flutter_dotenv: ^5.2.1
 
 dev_dependencies:
   flutter_test:
@@ -82,6 +83,9 @@ flutter:
     - assets/data/swahili_bible.json
     - assets/data/english_bible.json
     - assets/data/tenzi.json
+    # Local Supabase keys (gitignored). Copy .env.example -> .env.
+    # Missing on CI/other machines: create it from .env.example.
+    - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

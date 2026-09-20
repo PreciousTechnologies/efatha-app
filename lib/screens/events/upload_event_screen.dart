@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
+import '../../core/services/supabase_storage_service.dart';
 
 class UploadEventScreen extends StatefulWidget {
   final Map<String, dynamic>? event; // For editing existing event
@@ -60,7 +64,9 @@ class _UploadEventScreenState extends State<UploadEventScreen> {
     _selectedCategory = event['category'] ?? 'other';
     _requiresRegistration = event['requires_registration'] ?? false;
     _maxAttendeesController.text = event['max_attendees']?.toString() ?? '';
-    _existingCoverUrl = event['banner_image'];
+    // Supabase rows carry `banner_url`; Django used `banner_image`.
+    _existingCoverUrl =
+        event['banner_image']?.toString() ?? event['banner_url']?.toString();
 
     if (event['start_date'] != null) {
       final startDateTime = DateTime.parse(event['start_date']);
@@ -173,16 +179,6 @@ class _UploadEventScreenState extends State<UploadEventScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Get auth token
-      final storageService = StorageService();
-      final token = await storageService.getAccessToken();
-
-      if (token == null) {
-        _showError('Authentication required. Please log in again.');
-        setState(() => _isLoading = false);
-        return;
-      }
-
       // Combine date and time
       final startDateTime = DateTime(
         _startDate!.year,
@@ -199,6 +195,22 @@ class _UploadEventScreenState extends State<UploadEventScreen> {
         _endTime!.hour,
         _endTime!.minute,
       );
+
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        await _saveSupabase(startDateTime, endDateTime);
+        return;
+      }
+
+      // Get auth token
+      final storageService = StorageService();
+      final token = await storageService.getAccessToken();
+
+      if (token == null) {
+        _showError('Authentication required. Please log in again.');
+        setState(() => _isLoading = false);
+        return;
+      }
 
       // Create multipart request
       final uri = widget.event == null
@@ -265,7 +277,59 @@ class _UploadEventScreenState extends State<UploadEventScreen> {
     }
   }
 
+  /// Save via Supabase: insert/update row, upload banner, save URL back.
+  Future<void> _saveSupabase(
+    DateTime startDateTime,
+    DateTime endDateTime,
+  ) async {
+    final db = SupabaseDatabaseService();
+    final storage = SupabaseStorageService();
+    final organizerId = SupabaseAuthService().currentUser?.id;
+
+    final fields = <String, dynamic>{
+      'title': _titleController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'location': _locationController.text.trim(),
+      'start_date': startDateTime.toIso8601String(),
+      'end_date': endDateTime.toIso8601String(),
+      'category': _selectedCategory,
+      'requires_registration': _requiresRegistration,
+      'is_published': true,
+      if (_maxAttendeesController.text.isNotEmpty)
+        'max_attendees': int.tryParse(_maxAttendeesController.text.trim()),
+      if (_registrationDeadline != null)
+        'registration_deadline': _registrationDeadline!.toIso8601String(),
+    };
+
+    late final String eventId;
+    final isEditing = widget.event != null;
+    if (isEditing) {
+      eventId = widget.event!['id'].toString();
+      await db.update(SupabaseConfig.eventsTable, eventId, fields);
+    } else {
+      final row = await db.insert(SupabaseConfig.eventsTable, {
+        ...fields,
+        if (organizerId != null) 'organizer_id': organizerId,
+      });
+      eventId = row['id'].toString();
+    }
+
+    if (_coverImage != null) {
+      final url = await storage.uploadEventBanner(eventId, _coverImage!);
+      await db.update(SupabaseConfig.eventsTable, eventId, {
+        'banner_url': url,
+      });
+    }
+
+    if (!mounted) return;
+    Navigator.pop(context, true); // Return true to indicate success
+    _showSuccess(
+      isEditing ? 'Event updated successfully!' : 'Event created successfully!',
+    );
+  }
+
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
     );

@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local secrets — never commit Supabase/service keys
+*.env
+.env
+.env.local
+supabase_keys.*
+run_supabase.*

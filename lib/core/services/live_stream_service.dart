@@ -2,11 +2,32 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
+import '../config/supabase_config.dart';
+import 'supabase_auth_service.dart';
+import 'supabase_database_service.dart';
 
-/// Service for managing live streams
+/// Service for managing live streams.
+/// Supabase-first (Django fallback while migrating). Signatures unchanged
+/// so live_screen / create_live_stream_screen work on both backends
+/// (Supabase ids are uuid strings, Django ids are ints -> dynamic).
 class LiveStreamService {
+  final SupabaseDatabaseService _db = SupabaseDatabaseService();
+
   /// Get all live streams
   Future<Map<String, dynamic>> getLiveStreams() async {
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final rows = await _db.list(
+          SupabaseConfig.liveStreamsTable,
+          orderBy: 'created_at',
+          limit: 50,
+        );
+        return {'success': true, 'streams': rows};
+      } catch (e) {
+        return {'success': false, 'error': 'Error fetching streams: $e'};
+      }
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
@@ -32,6 +53,18 @@ class LiveStreamService {
 
   /// Get current live stream
   Future<Map<String, dynamic>> getCurrentLiveStream() async {
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final stream = await _db.getCurrentLiveStream();
+        return {'success': true, 'stream': stream};
+      } catch (e) {
+        return {
+          'success': false,
+          'error': 'Error fetching current stream: $e',
+        };
+      }
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
@@ -67,18 +100,40 @@ class LiveStreamService {
     required DateTime scheduledFor,
     String? thumbnailUrl,
   }) async {
+    // Extract YouTube video ID from URL (backend-independent).
+    final videoId = _extractYouTubeId(youtubeUrl);
+    if (videoId == null) {
+      return {'success': false, 'error': 'Invalid YouTube URL'};
+    }
+
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final uid = SupabaseAuthService().currentUser?.id;
+        if (uid == null) {
+          return {'success': false, 'error': 'Not authenticated'};
+        }
+        final row = await _db.insert(SupabaseConfig.liveStreamsTable, {
+          'title': title,
+          'youtube_url': youtubeUrl,
+          'youtube_video_id': videoId,
+          'description': description,
+          'scheduled_for': scheduledFor.toIso8601String(),
+          'thumbnail_url': thumbnailUrl,
+          'status': 'scheduled',
+          'created_by': uid,
+        });
+        return {'success': true, 'stream': row};
+      } catch (e) {
+        return {'success': false, 'error': 'Error creating stream: $e'};
+      }
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
 
       if (token == null) {
         return {'success': false, 'error': 'Not authenticated'};
-      }
-
-      // Extract YouTube video ID from URL
-      final videoId = _extractYouTubeId(youtubeUrl);
-      if (videoId == null) {
-        return {'success': false, 'error': 'Invalid YouTube URL'};
       }
 
       final response = await http.post(
@@ -114,9 +169,26 @@ class LiveStreamService {
 
   /// Update live stream status
   Future<Map<String, dynamic>> updateStreamStatus({
-    required int streamId,
+    required dynamic streamId,
     required String status,
   }) async {
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final uid = SupabaseAuthService().currentUser?.id;
+        if (uid == null) {
+          return {'success': false, 'error': 'Not authenticated'};
+        }
+        final row = await _db.update(
+          SupabaseConfig.liveStreamsTable,
+          streamId,
+          {'status': status},
+        );
+        return {'success': true, 'stream': row};
+      } catch (e) {
+        return {'success': false, 'error': 'Error updating stream: $e'};
+      }
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
@@ -146,7 +218,20 @@ class LiveStreamService {
   }
 
   /// Delete a live stream
-  Future<Map<String, dynamic>> deleteLiveStream(int streamId) async {
+  Future<Map<String, dynamic>> deleteLiveStream(dynamic streamId) async {
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final uid = SupabaseAuthService().currentUser?.id;
+        if (uid == null) {
+          return {'success': false, 'error': 'Not authenticated'};
+        }
+        await _db.delete(SupabaseConfig.liveStreamsTable, streamId);
+        return {'success': true};
+      } catch (e) {
+        return {'success': false, 'error': 'Error deleting stream: $e'};
+      }
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');

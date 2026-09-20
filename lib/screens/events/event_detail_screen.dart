@@ -3,10 +3,13 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
 import 'upload_event_screen.dart';
 
 /// Event Detail Screen - Full event information with RSVP
@@ -20,10 +23,14 @@ class EventDetailScreen extends StatefulWidget {
 }
 
 class _EventDetailScreenState extends State<EventDetailScreen> {
+  final SupabaseDatabaseService _supabaseDb = SupabaseDatabaseService();
+
   bool _isRegistered = false;
   bool _isLoading = false; // ignore: unused_field
   String? _userRole;
-  int? _userId;
+  int? _userId; // Django int id (fallback path)
+  String? _supabaseUid; // Supabase uuid (primary path)
+  String? _myRegistrationId; // Supabase registration row id
   int _registrationCount = 0;
 
   @override
@@ -33,8 +40,26 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     _checkRegistrationStatus();
   }
 
+  bool get _useSupabase => SupabaseConfig.isConfigured && _supabaseUid != null;
+
   Future<void> _loadUserData() async {
+    // Supabase-first (Django fallback while migrating).
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final auth = SupabaseAuthService();
+        final profile = await auth.getCurrentProfile();
+        if (profile != null && mounted) {
+          setState(() {
+            _userRole = profile['role']?.toString() ?? 'member';
+            _supabaseUid = auth.currentUser?.id;
+          });
+          _checkRegistrationStatus();
+          return;
+        }
+      } catch (_) {}
+    }
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _userRole = prefs.getString('user_role') ?? 'user';
       _userId = prefs.getInt('user_id');
@@ -42,9 +67,26 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Future<void> _checkRegistrationStatus() async {
-    if (_userId == null) return;
-
     try {
+      // Supabase-first.
+      if (_useSupabase) {
+        final eventId = widget.event['id'].toString();
+        final regs = await _supabaseDb.getEventRegistrations(eventId);
+        final mine = await _supabaseDb.getMyEventRegistration(
+          eventId,
+          _supabaseUid!,
+        );
+        if (!mounted) return;
+        setState(() {
+          _isRegistered = mine != null;
+          _myRegistrationId = mine?['id']?.toString();
+          _registrationCount = regs.length;
+        });
+        return;
+      }
+
+      if (_userId == null) return;
+
       // Get auth token
       final storageService = StorageService();
       final token = await storageService.getAccessToken();
@@ -61,6 +103,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        if (!mounted) return;
         setState(() {
           _isRegistered = data.isNotEmpty;
           _registrationCount = widget.event['registered_count'] ?? 0;
@@ -73,7 +116,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   Future<void> _toggleRegistration() async {
     // ignore: unused_element
-    if (_userId == null) {
+    if (!_useSupabase && _userId == null) {
       _showError('Please log in to register for events');
       return;
     }
@@ -106,6 +149,40 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Supabase-first.
+      if (_useSupabase) {
+        final eventId = widget.event['id'].toString();
+        if (_isRegistered) {
+          // Unregister
+          final mine = await _supabaseDb.getMyEventRegistration(
+            eventId,
+            _supabaseUid!,
+          );
+          if (mine != null) {
+            await _supabaseDb.unregisterFromEvent(mine['id'].toString());
+          }
+          if (!mounted) return;
+          setState(() {
+            _isRegistered = false;
+            _myRegistrationId = null;
+            _registrationCount = (_registrationCount - 1).clamp(0, 1 << 30);
+            _isLoading = false;
+          });
+          _showSuccess('Registration cancelled');
+        } else {
+          // Register
+          await _supabaseDb.registerForEvent(eventId, _supabaseUid!);
+          if (!mounted) return;
+          setState(() {
+            _isRegistered = true;
+            _registrationCount++;
+            _isLoading = false;
+          });
+          _showSuccess('Successfully registered!');
+        }
+        return;
+      }
+
       // Get auth token
       final storageService = StorageService();
       final token = await storageService.getAccessToken();
@@ -204,6 +281,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
     if (confirmed == true) {
       try {
+        // Supabase-first (Django fallback while migrating).
+        if (SupabaseConfig.isConfigured) {
+          await _supabaseDb.delete(
+            SupabaseConfig.eventsTable,
+            widget.event['id'],
+          );
+          if (!mounted) return;
+          _showSuccess('Event deleted successfully');
+          Navigator.pop(context, true); // Return to events list
+          return;
+        }
+
         // Get auth token
         final storageService = StorageService();
         final token = await storageService.getAccessToken();
@@ -244,14 +333,27 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   bool get _canManageEvent {
-    return _userRole == 'admin' || _userRole == 'editor';
+    // Mirrors Django can_edit_content (admin/editor/data_entry/leadership).
+    const allowed = {
+      'admin',
+      'editor',
+      'data_entry',
+      'chief_apostle',
+      'katibu_kiongozi',
+      'apostle',
+      'senior_pastor',
+      'bishop',
+    };
+    return allowed.contains(_userRole?.toLowerCase());
   }
 
   @override
   Widget build(BuildContext context) {
     final startDate = DateTime.parse(widget.event['start_date']);
     final endDate = DateTime.parse(widget.event['end_date']);
-    final coverUrl = widget.event['banner_image'];
+    // Supabase rows carry `banner_url`; Django used `banner_image`.
+    final coverUrl =
+        widget.event['banner_image'] ?? widget.event['banner_url'];
     final category = widget.event['category'] ?? 'other';
     final requiresRegistration = widget.event['requires_registration'] == true;
     final maxAttendees = widget.event['max_attendees'];

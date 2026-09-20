@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/supabase_auth_service.dart';
 
 /// Edit Profile Screen - Allows user to edit all their information
 class EditProfileScreen extends StatefulWidget {
@@ -336,6 +338,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       // Remove empty values
       profileData.removeWhere((key, value) => value == null || value == '');
+
+      // Supabase-first (Django fallback while migrating).
+      // NOTE: this updates the profile row; the Auth sign-in email is
+      // unchanged (Supabase requires a separate confirmation flow).
+      if (SupabaseConfig.isConfigured) {
+        try {
+          await SupabaseAuthService().updateProfile(
+            Map<String, dynamic>.from(profileData),
+          );
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile updated successfully! ✅'),
+              backgroundColor: AppColors.successGreenPrimary,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (!mounted) return;
+          Navigator.pop(context, true);
+        } catch (e) {
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to update profile: $e'),
+              backgroundColor: AppColors.dangerRedPrimary,
+            ),
+          );
+        }
+        return;
+      }
 
       final response = await _apiService.updateProfile(profileData);
 

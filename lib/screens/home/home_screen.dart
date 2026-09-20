@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
 import '../../core/config/api_config.dart';
 import '../sermons/sermons_screen.dart';
 import '../events/events_screen.dart';
@@ -120,6 +122,22 @@ class _HomeTabState extends State<_HomeTab> {
 
   Future<void> _loadUserData() async {
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        try {
+          final profile = await SupabaseAuthService().getCurrentProfile();
+          if (profile != null && mounted) {
+            setState(() {
+              _userData = profile;
+              _isLoadingUser = false;
+            });
+            return;
+          }
+        } catch (_) {
+          // Fall through to Django.
+        }
+      }
+
       // Try to get user data from storage first
       final storedData = await _storageService.getUserData();
 
@@ -228,6 +246,11 @@ class _HomeTabState extends State<_HomeTab> {
     );
 
     if (confirmed == true) {
+      if (SupabaseConfig.isConfigured) {
+        try {
+          await SupabaseAuthService().signOut();
+        } catch (_) {}
+      }
       await _apiService.logout();
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(

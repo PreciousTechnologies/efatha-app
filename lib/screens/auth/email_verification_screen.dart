@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/supabase_auth_service.dart';
 import '../../widgets/app_button.dart';
 import '../home/home_screen.dart';
 import 'dart:async';
@@ -18,11 +21,16 @@ class EmailVerificationScreen extends StatefulWidget {
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
-  final List<TextEditingController> _controllers = List.generate(
-    4,
+  // Supabase email OTP is 6 digits; legacy Django codes were 4.
+  late final int _codeLength = SupabaseConfig.isConfigured ? 6 : 4;
+  late final List<TextEditingController> _controllers = List.generate(
+    _codeLength,
     (index) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(4, (index) => FocusNode());
+  late final List<FocusNode> _focusNodes = List.generate(
+    _codeLength,
+    (index) => FocusNode(),
+  );
 
   bool _isLoading = false;
   bool _canResend = false;
@@ -32,6 +40,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   @override
   void initState() {
     super.initState();
+    // Touch late fields before first build.
+    _controllers;
+    _focusNodes;
     _startResendTimer();
   }
 
@@ -67,13 +78,73 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     return _controllers.map((c) => c.text).join();
   }
 
+  void _clearCode() {
+    for (var controller in _controllers) {
+      controller.clear();
+    }
+    _focusNodes[0].requestFocus();
+  }
+
+  /// Try sign-in OTP first, then signup-confirmation OTP.
+  /// (The Confirm-signup template issues `signup`-type codes when it
+  /// contains `{{ .Token }}`; the OTP screen issues `email`-type codes.)
+  Future<void> _verifySupabaseCode(
+    SupabaseAuthService auth,
+    String code,
+  ) async {
+    try {
+      await auth.verifyOtp(email: widget.email, token: code);
+    } on AuthException {
+      await auth.verifyOtp(
+        email: widget.email,
+        token: code,
+        type: OtpType.signup,
+      );
+    }
+  }
+
+  void _goHome() {
+    // Navigate to Home immediately
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+      (route) => false,
+    );
+
+    // Show success message after navigation
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verification successful!'),
+            backgroundColor: AppColors.successGreenPrimary,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    });
+  }
+
+  void _showVerifyError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.dangerRedPrimary,
+        action: SnackBarAction(
+          label: 'Try Again',
+          textColor: Colors.white,
+          onPressed: _clearCode,
+        ),
+      ),
+    );
+  }
+
   Future<void> _verifyCode() async {
     final enteredCode = _getEnteredCode();
 
-    if (enteredCode.length != 4) {
+    if (enteredCode.length != _codeLength) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter all 4 digits'),
+        SnackBar(
+          content: Text('Please enter all $_codeLength digits'),
           backgroundColor: AppColors.warningAmber,
         ),
       );
@@ -85,6 +156,29 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
 
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        try {
+          final auth = SupabaseAuthService();
+          await _verifySupabaseCode(auth, enteredCode);
+          // Apply any profile stashed at sign-up (confirmation-pending flow).
+          try {
+            await auth.completePendingProfile();
+          } catch (_) {}
+        } on AuthException catch (e) {
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          _showVerifyError(
+            'Invalid or expired code: ${SupabaseAuthService.friendlyError(e.message)}',
+          );
+          return;
+        }
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        _goHome();
+        return;
+      }
+
       final apiService = ApiService();
 
       // Verify code via API
@@ -100,41 +194,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       });
 
       if (response['success']) {
-        // Navigate to Home immediately
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (route) => false,
-        );
-
-        // Show success message after navigation
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Verification successful!'),
-                backgroundColor: AppColors.successGreenPrimary,
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
-        });
+        _goHome();
       } else {
         // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(response['message'] ?? 'Invalid verification code'),
-            backgroundColor: AppColors.dangerRedPrimary,
-            action: SnackBarAction(
-              label: 'Try Again',
-              textColor: Colors.white,
-              onPressed: () {
-                for (var controller in _controllers) {
-                  controller.clear();
-                }
-                _focusNodes[0].requestFocus();
-              },
-            ),
-          ),
+        _showVerifyError(
+          response['message'] ?? 'Invalid verification code',
         );
       }
     } catch (e) {
@@ -144,22 +208,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: AppColors.dangerRedPrimary,
-          action: SnackBarAction(
-            label: 'Try Again',
-            textColor: Colors.white,
-            onPressed: () {
-              for (var controller in _controllers) {
-                controller.clear();
-              }
-              _focusNodes[0].requestFocus();
-            },
-          ),
-        ),
-      );
+      _showVerifyError('Error: ${e.toString()}');
     }
   }
 
@@ -169,6 +218,38 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
 
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        try {
+          await SupabaseAuthService().sendOtp(
+            email: widget.email,
+            shouldCreateUser: false,
+          );
+        } on AuthException catch (e) {
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Could not resend code: ${SupabaseAuthService.friendlyError(e.message)}',
+              ),
+              backgroundColor: AppColors.dangerRedPrimary,
+            ),
+          );
+          return;
+        }
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verification code resent to your email'),
+            backgroundColor: AppColors.successGreenPrimary,
+          ),
+        );
+        _startResendTimer();
+        return;
+      }
+
       final apiService = ApiService();
 
       // Resend verification code
@@ -272,7 +353,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'We sent a 4-digit code to',
+                'We sent a $_codeLength-digit code to',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.neutralTextMuted,
@@ -292,13 +373,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               // Code Input Fields
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(4, (index) {
-                  return Container(
-                    margin: EdgeInsets.only(
-                      left: index == 0 ? 0 : 8,
-                      right: index == 3 ? 0 : 8,
+                children: List.generate(_codeLength, (index) {
+                  return Flexible(
+                    child: Container(
+                      margin: EdgeInsets.only(
+                        left: index == 0 ? 0 : 4,
+                        right: index == _codeLength - 1 ? 0 : 4,
+                      ),
+                      child: _buildCodeField(index),
                     ),
-                    child: _buildCodeField(index),
                   );
                 }),
               ),
@@ -348,9 +431,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   }
 
   Widget _buildCodeField(int index) {
+    // 6 Supabase boxes must fit narrow phones — shrink slightly.
+    final boxSize = _codeLength > 4 ? 50.0 : 64.0;
     return Container(
-      width: 64,
-      height: 64,
+      width: boxSize,
+      height: boxSize + 4,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -389,7 +474,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         onChanged: (value) {
           if (value.isNotEmpty) {
             // Move to next field
-            if (index < 3) {
+            if (index < _codeLength - 1) {
               _focusNodes[index + 1].requestFocus();
             } else {
               // All fields filled, auto-verify

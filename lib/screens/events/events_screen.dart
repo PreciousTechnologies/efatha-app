@@ -3,10 +3,13 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
 import 'upload_event_screen.dart';
 import 'event_detail_screen.dart';
 
@@ -34,16 +37,79 @@ class _EventsScreenState extends State<EventsScreen> {
   }
 
   Future<void> _loadUserRole() async {
+    // Supabase-first (Django fallback while migrating).
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final profile = await SupabaseAuthService().getCurrentProfile();
+        if (profile != null && mounted) {
+          setState(() {
+            _userRole = profile['role']?.toString() ?? 'member';
+          });
+          return;
+        }
+      } catch (_) {}
+    }
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _userRole = prefs.getString('user_role') ?? 'user';
     });
+  }
+
+  /// Client-side date filter (works for both backends).
+  bool _matchesDateFilter(Map<String, dynamic> event) {
+    if (_selectedFilter == 'all') return true;
+    try {
+      final start = DateTime.parse(event['start_date'].toString());
+      final now = DateTime.now();
+      switch (_selectedFilter) {
+        case 'upcoming':
+          return !start.isBefore(now);
+        case 'this_week':
+          return !start.isBefore(now) &&
+              start.isBefore(now.add(const Duration(days: 7)));
+        case 'this_month':
+          return start.year == now.year && start.month == now.month;
+      }
+    } catch (_) {
+      return false;
+    }
+    return true;
+  }
+
+  List<Map<String, dynamic>> _validateEvents(
+    List<Map<String, dynamic>> eventsList,
+  ) {
+    // Validate each event has required fields
+    final validEvents = <Map<String, dynamic>>[];
+    for (var event in eventsList) {
+      if (event['start_date'] != null && event['title'] != null) {
+        if (_matchesDateFilter(event)) validEvents.add(event);
+      } else {
+        print(
+          'WARNING: Skipping invalid event (missing start_date or title): $event',
+        );
+      }
+    }
+    return validEvents;
   }
 
   Future<void> _fetchEvents() async {
     setState(() => _isLoading = true);
 
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        final events = await SupabaseDatabaseService().getEvents(limit: 100);
+        if (!mounted) return;
+        setState(() {
+          _events = _validateEvents(events);
+          _isLoading = false;
+        });
+        print('DEBUG: ${_events.length} valid events (Supabase)');
+        return;
+      }
+
       String endpoint = ApiConfig.events;
       final now = DateTime.now();
 
@@ -108,8 +174,9 @@ class _EventsScreenState extends State<EventsScreen> {
 
         print('DEBUG: ${validEvents.length} valid events after filtering');
 
+        if (!mounted) return;
         setState(() {
-          _events = validEvents;
+          _events = _validateEvents(validEvents);
           _isLoading = false;
         });
       } else {
@@ -124,7 +191,7 @@ class _EventsScreenState extends State<EventsScreen> {
     }
   }
 
-  Future<void> _deleteEvent(int eventId) async {
+  Future<void> _deleteEvent(dynamic eventId) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -145,6 +212,18 @@ class _EventsScreenState extends State<EventsScreen> {
 
     if (confirmed == true) {
       try {
+        // Supabase-first (Django fallback while migrating).
+        if (SupabaseConfig.isConfigured) {
+          await SupabaseDatabaseService().delete(
+            SupabaseConfig.eventsTable,
+            eventId,
+          );
+          if (!mounted) return;
+          _showSuccess('Event deleted successfully');
+          _fetchEvents(); // Refresh list
+          return;
+        }
+
         // Get auth token
         final storageService = StorageService();
         final token = await storageService.getAccessToken();
@@ -185,7 +264,18 @@ class _EventsScreenState extends State<EventsScreen> {
   }
 
   bool get _canManageEvents {
-    return _userRole == 'admin' || _userRole == 'editor';
+    // Mirrors Django can_edit_content (admin/editor/data_entry/leadership).
+    const allowed = {
+      'admin',
+      'editor',
+      'data_entry',
+      'chief_apostle',
+      'katibu_kiongozi',
+      'apostle',
+      'senior_pastor',
+      'bishop',
+    };
+    return allowed.contains(_userRole?.toLowerCase());
   }
 
   String _getFilterDescription() {
@@ -498,7 +588,8 @@ class _EnhancedEventCard extends StatelessWidget {
       }
 
       final startDate = DateTime.parse(startDateStr);
-      final coverUrl = event['banner_image'];
+      // Supabase rows carry `banner_url`; Django used `banner_image`.
+      final coverUrl = event['banner_image'] ?? event['banner_url'];
       final registrationCount = event['registered_count'] ?? 0;
       final maxAttendees = event['max_attendees'];
       final category = event['category'] ?? 'other';

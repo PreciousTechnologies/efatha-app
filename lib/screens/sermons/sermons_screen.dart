@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
 import 'upload_sermon_screen.dart';
 import 'sermon_detail_screen.dart';
 
@@ -23,8 +26,10 @@ enum SortOption { newest, oldest, popular, title }
 class _SermonsScreenState extends State<SermonsScreen> {
   final ApiService _apiService = ApiService();
   final StorageService _storage = StorageService();
+  final SupabaseDatabaseService _supabaseDb = SupabaseDatabaseService();
 
   ViewMode _viewMode = ViewMode.list;
+  SortOption _selectedSort = SortOption.newest;
   String _selectedCategory = 'all';
   String? _selectedPastor;
   String? _selectedTopic;
@@ -64,10 +69,38 @@ class _SermonsScreenState extends State<SermonsScreen> {
     super.dispose();
   }
 
+  /// Roles allowed to upload/edit (mirrors Django can_edit_content).
+  bool _isEditorRole(String? role) {
+    const allowed = {
+      'admin',
+      'editor',
+      'data_entry',
+      'chief_apostle',
+      'katibu_kiongozi',
+      'apostle',
+      'senior_pastor',
+      'bishop',
+    };
+    return allowed.contains(role?.toLowerCase());
+  }
+
   Future<void> _checkUserRole() async {
+    // Supabase-first (Django fallback while migrating).
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final profile = await SupabaseAuthService().getCurrentProfile();
+        if (profile != null && mounted) {
+          setState(() {
+            _isEditor = _isEditorRole(profile['role']?.toString());
+          });
+          return;
+        }
+      } catch (_) {}
+    }
     final role = await _storage.getUserRole();
+    if (!mounted) return;
     setState(() {
-      _isEditor = role?.toLowerCase() == 'editor';
+      _isEditor = _isEditorRole(role);
     });
     print('👤 User role: $role, isEditor: $_isEditor');
   }
@@ -76,43 +109,96 @@ class _SermonsScreenState extends State<SermonsScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await _apiService.getSermons(
-        category: _selectedCategory != 'all' ? _selectedCategory : null,
-        pastor: _selectedPastor,
-        topics: _selectedTopic,
-        search: _searchController.text.trim().isEmpty
-            ? null
-            : _searchController.text.trim(),
-      );
+      List<Map<String, dynamic>> sermons;
 
-      if (response['success'] == true) {
-        final data = response['data'];
-        setState(() {
-          _sermons = List<Map<String, dynamic>>.from(data['results'] ?? []);
-
-          // Extract unique pastors and topics for filters
-          _availablePastors.clear();
-          _availableTopics.clear();
-
-          for (var sermon in _sermons) {
-            if (sermon['pastor'] != null) {
-              _availablePastors.add(sermon['pastor'].toString());
-            }
-            if (sermon['topics'] != null) {
-              final topics = sermon['topics'].toString().split(',');
-              _availableTopics.addAll(topics.map((t) => t.trim()));
-            }
-          }
-        });
-        print('✅ Loaded ${_sermons.length} sermons');
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        sermons = await _supabaseDb.getSermons(
+          category: _selectedCategory != 'all' ? _selectedCategory : null,
+          pastor: _selectedPastor,
+          topic: _selectedTopic,
+          search: _searchController.text.trim().isEmpty
+              ? null
+              : _searchController.text.trim(),
+          limit: 100,
+        );
       } else {
-        print('❌ Failed to load sermons: ${response['message']}');
-        // Show error but don't crash - keep empty list
+        final response = await _apiService.getSermons(
+          category: _selectedCategory != 'all' ? _selectedCategory : null,
+          pastor: _selectedPastor,
+          topics: _selectedTopic,
+          search: _searchController.text.trim().isEmpty
+              ? null
+              : _searchController.text.trim(),
+        );
+
+        if (response['success'] != true) {
+          print('❌ Failed to load sermons: ${response['message']}');
+          // Show error but don't crash - keep empty list
+          return;
+        }
+        final data = response['data'];
+        sermons = List<Map<String, dynamic>>.from(data['results'] ?? []);
       }
+
+      _applySort(sermons);
+      if (!mounted) return;
+      setState(() {
+        _sermons = sermons;
+
+        // Extract unique pastors and topics for filters
+        _availablePastors.clear();
+        _availableTopics.clear();
+
+        for (var sermon in _sermons) {
+          if (sermon['pastor'] != null) {
+            _availablePastors.add(sermon['pastor'].toString());
+          }
+          if (sermon['topics'] != null) {
+            final topics = sermon['topics'].toString().split(',');
+            _availableTopics.addAll(topics.map((t) => t.trim()));
+          }
+        }
+      });
+      print('✅ Loaded ${_sermons.length} sermons');
     } catch (e) {
       print('❌ Exception loading sermons: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Client-side sort (works for both backends).
+  void _applySort(List<Map<String, dynamic>> sermons) {
+    switch (_selectedSort) {
+      case SortOption.newest:
+        sermons.sort(
+          (a, b) => (b['created_at']?.toString() ?? '').compareTo(
+            a['created_at']?.toString() ?? '',
+          ),
+        );
+        break;
+      case SortOption.oldest:
+        sermons.sort(
+          (a, b) => (a['created_at']?.toString() ?? '').compareTo(
+            b['created_at']?.toString() ?? '',
+          ),
+        );
+        break;
+      case SortOption.popular:
+        sermons.sort(
+          (a, b) => ((b['views'] as num?) ?? 0).compareTo(
+            (a['views'] as num?) ?? 0,
+          ),
+        );
+        break;
+      case SortOption.title:
+        sermons.sort(
+          (a, b) => (a['title']?.toString() ?? '').compareTo(
+            b['title']?.toString() ?? '',
+          ),
+        );
+        break;
     }
   }
 
@@ -130,7 +216,7 @@ class _SermonsScreenState extends State<SermonsScreen> {
     await _loadSermons();
   }
 
-  Future<void> _deleteSermon(int sermonId) async {
+  Future<void> _deleteSermon(dynamic sermonId) async {
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
@@ -178,7 +264,23 @@ class _SermonsScreenState extends State<SermonsScreen> {
     );
 
     try {
-      final response = await _apiService.deleteSermon(sermonId);
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        await _supabaseDb.delete(SupabaseConfig.sermonsTable, sermonId);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Sermon deleted successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        _loadSermons(); // Reload the list
+        return;
+      }
+
+      final response = await _apiService.deleteSermon(sermonId as int);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -271,6 +373,9 @@ class _SermonsScreenState extends State<SermonsScreen> {
                         ),
                         Row(
                           children: [
+                            // Sort Menu
+                            _buildSortMenu(),
+                            const SizedBox(width: 8),
                             // Editor Upload Button
                             if (_isEditor) ...[
                               Container(
@@ -411,6 +516,68 @@ class _SermonsScreenState extends State<SermonsScreen> {
             const SliverToBoxAdapter(child: SizedBox(height: 80)),
           ],
         ),
+      ),
+    );
+  }
+
+  String _sortLabel(SortOption option) {
+    switch (option) {
+      case SortOption.newest:
+        return 'Newest';
+      case SortOption.oldest:
+        return 'Oldest';
+      case SortOption.popular:
+        return 'Most Viewed';
+      case SortOption.title:
+        return 'Title A–Z';
+    }
+  }
+
+  Widget _buildSortMenu() {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColors.neutralBackgroundSoft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: PopupMenuButton<SortOption>(
+        initialValue: _selectedSort,
+        onSelected: (option) {
+          setState(() {
+            _selectedSort = option;
+            _applySort(_sermons);
+          });
+        },
+        icon: Icon(
+          Icons.sort_rounded,
+          color: AppColors.primaryPurpleDeep,
+          size: 22,
+        ),
+        tooltip: 'Sort sermons',
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        itemBuilder: (context) => SortOption.values
+            .map(
+              (option) => PopupMenuItem(
+                value: option,
+                child: Row(
+                  children: [
+                    if (_selectedSort == option)
+                      Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: AppColors.primaryPurpleDeep,
+                      )
+                    else
+                      const SizedBox(width: 18),
+                    const SizedBox(width: 8),
+                    Text(_sortLabel(option)),
+                  ],
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }

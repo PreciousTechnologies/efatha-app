@@ -3,9 +3,13 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
+import '../../core/services/supabase_storage_service.dart';
 
 /// Screen for submitting a new prayer request
 class SubmitPrayerScreen extends StatefulWidget {
@@ -127,6 +131,14 @@ class _SubmitPrayerScreenState extends State<SubmitPrayerScreen> {
     });
 
     try {
+      // Supabase branch (no Django token needed).
+      if (SupabaseConfig.isConfigured) {
+        final prayerId = await _submitSupabase();
+        if (!mounted) return;
+        await _onSubmitSuccess(prayerId);
+        return;
+      }
+
       // Get auth token
       final storageService = StorageService();
       final token = await storageService.getAccessToken();
@@ -166,107 +178,7 @@ class _SubmitPrayerScreenState extends State<SubmitPrayerScreen> {
         }
 
         if (!mounted) return;
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    isEditing
-                        ? 'Prayer request updated successfully!'
-                        : 'Prayer request submitted successfully!',
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.successGreenPrimary,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-
-        // Ask if user wants to add testimony (only for new prayers, not edits)
-        if (!isEditing && mounted) {
-          final shouldAddTestimony = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primaryPurpleDeep,
-                          AppColors.primaryPurpleVibrant,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.celebration,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Add Testimony?',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  ),
-                ],
-              ),
-              content: const Text(
-                'Would you like to share a testimony about how God answered this prayer request?',
-                style: TextStyle(fontSize: 15),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(
-                    'Not Now',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryPurpleDeep,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text('Yes, Add Testimony'),
-                ),
-              ],
-            ),
-          );
-
-          if (shouldAddTestimony == true && mounted) {
-            // Navigate back first, then open testimony screen
-            Navigator.pop(context, {
-              'success': true,
-              'addTestimony': true,
-              'prayerId': prayerId,
-              'prayerTitle': _titleController.text,
-            });
-            return;
-          }
-        }
-
-        // Navigate back
-        if (mounted) {
-          Navigator.pop(context, true);
-        }
+        await _onSubmitSuccess(prayerId);
       } else {
         throw Exception('Failed to submit: ${response.body}');
       }
@@ -291,6 +203,156 @@ class _SubmitPrayerScreenState extends State<SubmitPrayerScreen> {
           _isSubmitting = false;
         });
       }
+    }
+  }
+
+  /// Submit via Supabase: insert/update row, upload images, save rows.
+  /// Returns the prayer id (uuid string). Throws on failure.
+  Future<dynamic> _submitSupabase() async {
+    final db = SupabaseDatabaseService();
+    final storage = SupabaseStorageService();
+    final uid = SupabaseAuthService().currentUser?.id;
+    if (uid == null) throw Exception('Please log in again');
+
+    final fields = <String, dynamic>{
+      'title': _titleController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'priority': _selectedPriority,
+      'category': _selectedCategory,
+      'is_anonymous': _isAnonymous,
+    };
+
+    late final String prayerId;
+    if (isEditing) {
+      prayerId = widget.prayerData!['id'].toString();
+      await db.update(SupabaseConfig.prayerRequestsTable, prayerId, fields);
+    } else {
+      final row = await db.insert(SupabaseConfig.prayerRequestsTable, {
+        ...fields,
+        'user_id': uid,
+      });
+      prayerId = row['id'].toString();
+    }
+
+    // Upload images (Storage + prayer_images rows).
+    for (final img in _selectedImages) {
+      try {
+        final url = await storage.uploadPrayerImage(
+          prayerId,
+          File(img.path),
+        );
+        await db.insert(SupabaseConfig.prayerImagesTable, {
+          'prayer_request_id': prayerId,
+          'image_url': url,
+        });
+      } catch (e) {
+        print('Error uploading prayer image: $e');
+      }
+    }
+
+    return prayerId;
+  }
+
+  /// Shared post-submit UI: success snackbar, testimony prompt, pop.
+  Future<void> _onSubmitSuccess(dynamic prayerId) async {
+    if (!mounted) return;
+
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                isEditing
+                    ? 'Prayer request updated successfully!'
+                    : 'Prayer request submitted successfully!',
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.successGreenPrimary,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
+    // Ask if user wants to add testimony (only for new prayers, not edits)
+    if (!isEditing && mounted) {
+      final shouldAddTestimony = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primaryPurpleDeep,
+                      AppColors.primaryPurpleVibrant,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.celebration,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('Add Testimony?', style: TextStyle(fontSize: 18)),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Would you like to share a testimony about how God answered this prayer request?',
+            style: TextStyle(fontSize: 15),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                'Not Now',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryPurpleDeep,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Yes, Add Testimony'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldAddTestimony == true && mounted) {
+        // Navigate back first, then open testimony screen
+        Navigator.pop(context, {
+          'success': true,
+          'addTestimony': true,
+          'prayerId': prayerId,
+          'prayerTitle': _titleController.text,
+        });
+        return;
+      }
+    }
+
+    // Navigate back
+    if (mounted) {
+      Navigator.pop(context, true);
     }
   }
 

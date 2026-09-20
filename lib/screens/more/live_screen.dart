@@ -3,10 +3,12 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/live_stream_service.dart';
 import '../../core/services/live_chat_service.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
 import 'create_live_stream_screen.dart';
 
 /// Live Screen - Live streaming and scheduled broadcasts
@@ -50,7 +52,31 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   Future<void> _checkUserRole() async {
+    // Supabase-first (Django fallback while migrating).
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final profile = await SupabaseAuthService().getCurrentProfile();
+        if (profile != null && mounted) {
+          const allowed = {
+            'admin',
+            'editor',
+            'chief_apostle',
+            'katibu_kiongozi',
+            'apostle',
+            'senior_pastor',
+            'bishop',
+          };
+          setState(() {
+            _isAdmin = allowed.contains(
+              profile['role']?.toString().toLowerCase(),
+            );
+          });
+          return;
+        }
+      } catch (_) {}
+    }
     final role = await _storageService.getUserRole();
+    if (!mounted) return;
     setState(() {
       _isAdmin = role == 'admin' || role == 'editor';
     });
@@ -217,10 +243,24 @@ class _LiveScreenState extends State<LiveScreen> {
     final message = _chatController.text.trim();
     _chatController.clear();
 
-    // Get user info for optimistic UI update
-    final prefs = await SharedPreferences.getInstance();
-    final userName = prefs.getString('user_name') ?? 'You';
-    final userProfilePicture = prefs.getString('user_profile_picture');
+    // Get user info for optimistic UI update (Supabase profile first).
+    String userName = 'You';
+    String? userProfilePicture;
+    if (SupabaseConfig.isConfigured) {
+      try {
+        final profile = await SupabaseAuthService().getCurrentProfile();
+        final first = (profile?['first_name']?.toString() ?? '').trim();
+        final last = (profile?['last_name']?.toString() ?? '').trim();
+        final full = '$first $last'.trim();
+        if (full.isNotEmpty) userName = full;
+        userProfilePicture = profile?['profile_picture_url']?.toString();
+      } catch (_) {}
+    }
+    if (userName == 'You') {
+      final prefs = await SharedPreferences.getInstance();
+      userName = prefs.getString('user_name') ?? 'You';
+      userProfilePicture ??= prefs.getString('user_profile_picture');
+    }
 
     // Add message optimistically to UI
     final optimisticMessage = {

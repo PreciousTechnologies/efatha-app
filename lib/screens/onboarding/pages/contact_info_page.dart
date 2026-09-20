@@ -16,6 +16,8 @@ class ContactInfoPage extends StatefulWidget {
 
 class _ContactInfoPageState extends State<ContactInfoPage> {
   final _formKey = GlobalKey<FormState>();
+  bool _isPasswordVisible = false;
+  bool _isConfirmVisible = false;
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
@@ -129,6 +131,72 @@ class _ContactInfoPageState extends State<ContactInfoPage> {
               initialValue: widget.controller.formData['postalAddress'],
               onChanged: (value) {
                 widget.controller.updateFormData('postalAddress', value);
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // Password (used for Supabase Auth sign-in)
+            CustomTextField(
+              label: 'Password',
+              isRequired: true,
+              prefixIcon: Icons.lock_outline,
+              hint: 'Min. 6 characters',
+              obscureText: !_isPasswordVisible,
+              initialValue: widget.controller.formData['password'],
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _isPasswordVisible
+                      ? Icons.visibility_off
+                      : Icons.visibility,
+                  size: 20,
+                  color: AppColors.neutralTextMuted,
+                ),
+                onPressed: () => setState(
+                  () => _isPasswordVisible = !_isPasswordVisible,
+                ),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Password is required';
+                }
+                if (value.length < 6) {
+                  return 'Password must be at least 6 characters';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                widget.controller.updateFormData('password', value);
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // Confirm Password
+            CustomTextField(
+              label: 'Confirm Password',
+              isRequired: true,
+              prefixIcon: Icons.lock_outline,
+              hint: 'Repeat your password',
+              obscureText: !_isConfirmVisible,
+              initialValue: widget.controller.formData['confirmPassword'],
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _isConfirmVisible
+                      ? Icons.visibility_off
+                      : Icons.visibility,
+                  size: 20,
+                  color: AppColors.neutralTextMuted,
+                ),
+                onPressed: () =>
+                    setState(() => _isConfirmVisible = !_isConfirmVisible),
+              ),
+              validator: (value) {
+                if (value != widget.controller.formData['password']) {
+                  return 'Passwords do not match';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                widget.controller.updateFormData('confirmPassword', value);
               },
             ),
 

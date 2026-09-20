@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'core/config/supabase_config.dart';
 import 'core/services/supabase_client_service.dart';
@@ -8,6 +9,16 @@ import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load local .env (gitignored) so plain `flutter run` gets Supabase keys.
+  // Missing file (CI/fresh clone): copy .env.example -> .env, or use
+  // --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    debugPrint('.env not found — using --dart-define values or placeholders.');
+  }
+  SupabaseConfig.init();
 
   // Initialize Supabase (skipped gracefully until keys are configured).
   if (SupabaseConfig.isConfigured) {

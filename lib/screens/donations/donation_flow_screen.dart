@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/services/pesapal_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
 import 'pesapal_payment_screen.dart';
 
 /// Multi-step donation flow screen
@@ -282,6 +285,18 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
     required String transactionId,
     required String merchantReference,
   }) async {
+    // Supabase-first (Django fallback while migrating).
+    if (SupabaseConfig.isConfigured) {
+      await _saveDonationToSupabase(
+        amount: amount,
+        currency: currency,
+        paymentMethod: paymentMethod,
+        transactionId: transactionId,
+        merchantReference: merchantReference,
+      );
+      return;
+    }
+
     try {
       final storageService = StorageService();
       final token = await storageService.getAccessToken();
@@ -312,6 +327,80 @@ class _DonationFlowScreenState extends State<DonationFlowScreen> {
     } catch (e) {
       print('Error saving donation: $e');
     }
+  }
+
+  /// Save completed Pesapal payment as Supabase giving + transaction rows.
+  Future<void> _saveDonationToSupabase({
+    required double amount,
+    required String currency,
+    required String paymentMethod,
+    required String transactionId,
+    required String merchantReference,
+  }) async {
+    try {
+      final db = SupabaseDatabaseService();
+      final user = SupabaseAuthService().currentUser;
+
+      final giving = await db.createGiving({
+        if (user != null) 'user_id': user.id,
+        'donor_name': _isAnonymous
+            ? 'Anonymous'
+            : (_nameController.text.trim().isEmpty
+                  ? 'Church Member'
+                  : _nameController.text.trim()),
+        'donor_email': _emailController.text.trim(),
+        'donor_phone': _phoneController.text.trim(),
+        'amount': amount,
+        'currency': currency,
+        'giving_type': SupabaseDatabaseService.givingTypeForUiCategory(
+          widget.category,
+        ),
+        'payment_method': _toDbPaymentMethod(paymentMethod),
+        'transaction_ref': transactionId,
+        'merchant_reference': merchantReference,
+        'confirmation_code': transactionId,
+        'payment_status': 'completed',
+        'notes': _noteController.text.trim(),
+        'is_anonymous': _isAnonymous,
+        'is_recurring': _isRecurring,
+        'recurring_frequency': _isRecurring
+            ? _recurringFrequency.toLowerCase()
+            : '',
+        'completed_at': DateTime.now().toIso8601String(),
+      });
+
+      await db.createPaymentTransaction({
+        'giving_id': giving['id'],
+        'transaction_id':
+            '${merchantReference}_${DateTime.now().millisecondsSinceEpoch}',
+        'merchant_reference': merchantReference,
+        'gateway': 'pesapal',
+        'status': 'completed',
+        'amount': amount,
+        'currency': currency,
+        'payment_method': _toDbPaymentMethod(paymentMethod),
+        'confirmation_code': transactionId,
+        'payment_status_description': 'Completed via Pesapal',
+        'completed_at': DateTime.now().toIso8601String(),
+      });
+
+      print('Donation saved successfully (Supabase)');
+    } catch (e) {
+      print('Error saving donation: $e');
+    }
+  }
+
+  String _toDbPaymentMethod(String method) {
+    final lower = method.toLowerCase();
+    if (lower.contains('mobile') || lower.contains('m-pesa') ||
+        lower.contains('mpesa')) {
+      return 'mpesa';
+    }
+    if (lower.contains('credit')) return 'credit_card';
+    if (lower.contains('debit')) return 'debit_card';
+    if (lower.contains('bank')) return 'bank_transfer';
+    if (lower.contains('cash')) return 'cash';
+    return 'mpesa';
   }
 
   void _showSuccessDialog() {

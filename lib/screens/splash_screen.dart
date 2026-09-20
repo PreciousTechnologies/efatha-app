@@ -124,7 +124,14 @@ class _SplashScreenState extends State<SplashScreen>
       bool isAuthenticated = false;
       if (SupabaseConfig.isConfigured) {
         try {
-          isAuthenticated = SupabaseAuthService().isSignedIn;
+          final auth = SupabaseAuthService();
+          isAuthenticated = auth.isSignedIn;
+          if (isAuthenticated) {
+            // Covers confirm-via-email-link then reopen: stash applied now.
+            try {
+              await auth.completePendingProfile();
+            } catch (_) {}
+          }
         } catch (_) {
           isAuthenticated = false;
         }

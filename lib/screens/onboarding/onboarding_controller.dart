@@ -23,11 +23,15 @@ class OnboardingController extends ChangeNotifier {
   /// Update current page
   void setPage(int page) {
     _currentPage = page;
-    pageController.animateToPage(
-      page,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+    // Guard: controller may be used without an attached PageView
+    // (e.g. unit tests, or calls during disposal).
+    if (pageController.hasClients) {
+      pageController.animateToPage(
+        page,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
     notifyListeners();
   }
 
@@ -103,10 +107,14 @@ class OnboardingController extends ChangeNotifier {
   bool _validateContactInfo() {
     final phone = _formData['phone'] as String?;
     final email = _formData['email'] as String?;
+    final password = _formData['password'] as String?;
+    final confirmPassword = _formData['confirmPassword'] as String?;
 
     return phone?.isNotEmpty == true &&
         email?.isNotEmpty == true &&
-        _isValidEmail(email ?? '');
+        _isValidEmail(email ?? '') &&
+        (password?.length ?? 0) >= 6 &&
+        password == confirmPassword;
   }
 
   bool _validateChurchDetails() {
@@ -170,7 +178,9 @@ class OnboardingController extends ChangeNotifier {
     _currentPage = 0;
     _formData.clear();
     _pageValidation.updateAll((key, value) => false);
-    pageController.jumpToPage(0);
+    if (pageController.hasClients) {
+      pageController.jumpToPage(0);
+    }
     notifyListeners();
   }
 

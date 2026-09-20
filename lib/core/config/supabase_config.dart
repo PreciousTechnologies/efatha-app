@@ -1,28 +1,72 @@
-/// Supabase Configuration for Efatha Church App
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+/// Supabase Configuration for Efatha Church App.
 ///
-/// 1. Create a project at https://supabase.com
-/// 2. Copy Project URL + anon public key from Settings > API
-/// 3. Paste below (or use --dart-define, see below).
+/// Key priority (highest first):
+///  1. --dart-define=SUPABASE_URL / SUPABASE_ANON_KEY (CI, release builds)
+///  2. Local `.env` file in project root (gitignored, dev convenience —
+///     this is what makes plain `flutter run` work on your machine)
+///  3. Placeholders below (Supabase stays OFF, Django fallback active)
 ///
-/// Recommended (secure): pass at run time so keys are NOT committed:
-///   flutter run --dart-define=SUPABASE_URL=https://xyz.supabase.co \
-///               --dart-define=SUPABASE_ANON_KEY=eyJhbGci...
-///
-/// Fallback: edit the defaults below for local dev only.
+/// Never commit real keys: `.env` is gitignored (see .gitignore).
 class SupabaseConfig {
-  static const String supabaseUrl = String.fromEnvironment(
+  static const String _placeholderUrl = 'https://YOUR-PROJECT-REF.supabase.co';
+  static const String _placeholderKey = 'YOUR-SUPABASE-ANON-KEY';
+
+  // Compile-time overrides (empty unless passed via --dart-define).
+  static const String _envUrl = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://YOUR-PROJECT-REF.supabase.co',
+    defaultValue: '',
+  );
+  static const String _envKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: '',
   );
 
-  static const String supabaseAnonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: 'YOUR-SUPABASE-ANON-KEY',
-  );
+  static String _url = _placeholderUrl;
+  static String _key = _placeholderKey;
+  static bool _initialized = false;
+
+  /// Call once in main() after `dotenv.load()` (safe to call repeatedly).
+  /// Tolerates dotenv never being loaded (tests, edge cases).
+  static void init() {
+    if (_initialized) return;
+    _initialized = true;
+
+    String dotenvUrl = '';
+    String dotenvKey = '';
+    try {
+      dotenvUrl = dotenv.maybeGet('SUPABASE_URL')?.trim() ?? '';
+      dotenvKey = dotenv.maybeGet('SUPABASE_ANON_KEY')?.trim() ?? '';
+    } catch (_) {
+      // dotenv.load() was never called — fall through to other sources.
+    }
+
+    if (_envUrl.isNotEmpty) {
+      _url = _envUrl;
+    } else if (dotenvUrl.isNotEmpty) {
+      _url = dotenvUrl;
+    }
+
+    if (_envKey.isNotEmpty) {
+      _key = _envKey;
+    } else if (dotenvKey.isNotEmpty) {
+      _key = dotenvKey;
+    }
+  }
+
+  static String get supabaseUrl => _url;
+  static String get supabaseAnonKey => _key;
 
   static bool get isConfigured =>
-      !supabaseUrl.contains('YOUR-PROJECT-REF') &&
-      !supabaseAnonKey.contains('YOUR-SUPABASE');
+      !_url.contains('YOUR-PROJECT-REF') && !_key.contains('YOUR-SUPABASE');
+
+  /// Test-only reset (lets unit tests control configuration state).
+  static void debugReset() {
+    _url = _placeholderUrl;
+    _key = _placeholderKey;
+    _initialized = false;
+  }
 
   // Table names (mirror of Django models -> Supabase tables, see supabase/schema.sql)
   static const String profilesTable = 'profiles';

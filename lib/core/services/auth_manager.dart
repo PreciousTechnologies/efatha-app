@@ -28,6 +28,9 @@ class AuthManager extends ChangeNotifier {
       if (SupabaseConfig.isConfigured) {
         try {
           if (_supabaseAuth.isSignedIn) {
+            try {
+              await _supabaseAuth.completePendingProfile();
+            } catch (_) {}
             _isAuthenticated = true;
             _isInitialized = true;
             notifyListeners();

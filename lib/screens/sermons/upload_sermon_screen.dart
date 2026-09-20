@@ -2,9 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_database_service.dart';
+import '../../core/services/supabase_storage_service.dart';
 
 /// Upload/Edit Sermon Screen for Editors
 /// Enhanced UI/UX with comprehensive form validation
@@ -63,14 +67,19 @@ class _UploadSermonScreenState extends State<UploadSermonScreen> {
   void _populateFormData() {
     final data = widget.sermonData!;
     _titleController.text = data['title'] ?? '';
-    _pastorController.text = data['pastor'] ?? '';
+    // Supabase rows use `preacher`; Django used the `pastor` alias.
+    _pastorController.text =
+        data['pastor']?.toString() ?? data['preacher']?.toString() ?? '';
     _descriptionController.text = data['description'] ?? '';
     _topicsController.text = data['topics'] ?? '';
     _durationController.text = data['duration'] ?? '';
     _selectedCategory = data['category'];
-    _thumbnailFileName = data['thumbnail'];
-    _audioFileName = data['audio_url'];
-    _videoFileName = data['video_url'];
+    _thumbnailFileName =
+        data['thumbnail']?.toString() ?? data['thumbnail_url']?.toString();
+    _audioFileName =
+        data['audio_url']?.toString() ?? data['audio_file']?.toString();
+    _videoFileName =
+        data['video_url']?.toString() ?? data['video_file']?.toString();
   }
 
   @override
@@ -163,41 +172,116 @@ class _UploadSermonScreenState extends State<UploadSermonScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final sermonData = {
-        'title': _titleController.text.trim(),
-        'pastor': _pastorController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'topics': _topicsController.text.trim(),
-        'category': _selectedCategory,
-        'duration': _durationController.text.trim(),
-      };
-
-      if (widget.sermonData != null) {
-        // Update existing sermon
-        await _apiService.updateSermon(
-          widget.sermonData!['id'],
-          sermonData,
-          audioFile: _audioFile,
-          videoFile: _videoFile,
-          thumbnailFile: _thumbnailFile,
-        );
-        _showSnackBar('Sermon updated successfully!');
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        await _submitSupabase();
       } else {
-        // Create new sermon
-        await _apiService.uploadSermon(
-          sermonData,
-          audioFile: _audioFile,
-          videoFile: _videoFile,
-          thumbnailFile: _thumbnailFile,
-        );
-        _showSnackBar('Sermon uploaded successfully!');
+        await _submitDjango();
       }
 
+      if (!mounted) return;
       Navigator.pop(context, true); // Return true to indicate success
     } catch (e) {
+      if (!mounted) return;
       _showSnackBar('Error: $e', isError: true);
     } finally {
-      setState(() => _isSubmitting = false);
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  /// Upload flow: insert/update row, upload changed files to Storage,
+  /// then save the public URLs back on the row.
+  Future<void> _submitSupabase() async {
+    final db = SupabaseDatabaseService();
+    final storage = SupabaseStorageService();
+    final userId = SupabaseAuthService().currentUser?.id;
+
+    final fields = {
+      'title': _titleController.text.trim(),
+      'preacher': _pastorController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'topics': _topicsController.text.trim(),
+      'category': _selectedCategory,
+      'duration': _durationController.text.trim(),
+    };
+
+    late final String sermonId;
+    final isEditing = widget.sermonData != null;
+    if (isEditing) {
+      sermonId = widget.sermonData!['id'].toString();
+      await db.update(SupabaseConfig.sermonsTable, sermonId, fields);
+    } else {
+      final row = await db.insert(SupabaseConfig.sermonsTable, {
+        ...fields,
+        if (userId != null) 'uploaded_by': userId,
+      });
+      sermonId = row['id'].toString();
+    }
+
+    final urls = <String, String>{};
+    if (_audioFile != null) {
+      urls['audio_url'] = await storage.uploadSermonFile(
+        sermonId: sermonId,
+        kind: 'audio',
+        file: _audioFile!,
+      );
+    }
+    if (_videoFile != null) {
+      urls['video_url'] = await storage.uploadSermonFile(
+        sermonId: sermonId,
+        kind: 'video',
+        file: _videoFile!,
+      );
+    }
+    if (_thumbnailFile != null) {
+      urls['thumbnail_url'] = await storage.uploadSermonFile(
+        sermonId: sermonId,
+        kind: 'thumbnail',
+        file: _thumbnailFile!,
+      );
+    }
+    if (urls.isNotEmpty) {
+      await db.update(SupabaseConfig.sermonsTable, sermonId, urls);
+    }
+
+    if (!mounted) return;
+    _showSnackBar(
+      isEditing ? 'Sermon updated successfully!' : 'Sermon uploaded successfully!',
+    );
+  }
+
+  /// Legacy Django multipart upload (fallback until Supabase cutover).
+  Future<void> _submitDjango() async {
+    final sermonData = {
+      'title': _titleController.text.trim(),
+      'pastor': _pastorController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'topics': _topicsController.text.trim(),
+      'category': _selectedCategory,
+      'duration': _durationController.text.trim(),
+    };
+
+    if (widget.sermonData != null) {
+      // Update existing sermon
+      await _apiService.updateSermon(
+        widget.sermonData!['id'],
+        sermonData,
+        audioFile: _audioFile,
+        videoFile: _videoFile,
+        thumbnailFile: _thumbnailFile,
+      );
+      if (!mounted) return;
+      _showSnackBar('Sermon updated successfully!');
+    } else {
+      // Create new sermon
+      await _apiService.uploadSermon(
+        sermonData,
+        audioFile: _audioFile,
+        videoFile: _videoFile,
+        thumbnailFile: _thumbnailFile,
+      );
+      if (!mounted) return;
+      _showSnackBar('Sermon uploaded successfully!');
     }
   }
 

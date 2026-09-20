@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/supabase_auth_service.dart';
 import '../../widgets/app_button.dart';
 import '../home/home_screen.dart';
+import '../onboarding/onboarding_screen.dart';
 
 /// Login Screen with spiritual aesthetic
 /// Features email/password login and social authentication options
@@ -33,13 +37,30 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+
       try {
+        // Supabase-first (Django fallback while migrating).
+        if (SupabaseConfig.isConfigured) {
+          final auth = SupabaseAuthService();
+          await auth.signInWithPassword(email: email, password: password);
+          // Apply any profile stashed at sign-up (confirmation-pending flow).
+          try {
+            await auth.completePendingProfile();
+          } catch (_) {}
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          _goHome('Login successful!');
+          return;
+        }
+
         final apiService = ApiService();
 
         // Call login API
         final response = await apiService.login(
-          username: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
+          username: email,
+          password: password,
         );
 
         if (!mounted) return;
@@ -47,28 +68,14 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isLoading = false);
 
         if (response['success']) {
-          // Navigate to home and clear stack
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-            (route) => false,
-          );
-
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response['message'] ?? 'Login successful!'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          _goHome(response['message'] ?? 'Login successful!');
         } else {
-          // Show error message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response['message'] ?? 'Login failed'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          _showError(response['message'] ?? 'Login failed');
         }
+      } on AuthException catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        _showError(_friendlyAuthError(e.message));
       } catch (e) {
         if (!mounted) return;
 
@@ -84,16 +91,67 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _handleSocialLogin(String provider) async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
+  void _goHome(String message) {
+    // Navigate to home and clear stack
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+      (route) => false,
+    );
 
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  String _friendlyAuthError(String message) =>
+      SupabaseAuthService.friendlyError(message);
+
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      _showError('Enter your email above first, then tap Forgot Password.');
+      return;
     }
+    setState(() => _isLoading = true);
+    try {
+      if (SupabaseConfig.isConfigured) {
+        await SupabaseAuthService().resetPasswordForEmail(email);
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password reset email sent — check your inbox.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        return;
+      }
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showError('Password reset is not available yet. Contact the office.');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showError('Could not send reset email: ${e.toString()}');
+    }
+  }
+
+  Future<void> _handleSocialLogin(String provider) async {
+    // Social providers are not wired yet — never bypass auth.
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$provider sign-in is coming soon. Use email instead.'),
+        backgroundColor: AppColors.warningAmber,
+      ),
+    );
   }
 
   @override
@@ -274,9 +332,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () {
-                  // Navigate to forgot password
-                },
+                onPressed: _isLoading ? null : _handleForgotPassword,
                 child: Text(
                   'Forgot Password?',
                   style: AppTextStyles.bodyRegular.copyWith(
@@ -358,7 +414,9 @@ class _LoginScreenState extends State<LoginScreen> {
         Text('Don\'t have an account? ', style: AppTextStyles.bodyRegular),
         TextButton(
           onPressed: () {
-            // Navigate to sign up
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+            );
           },
           child: Text(
             'Sign Up',

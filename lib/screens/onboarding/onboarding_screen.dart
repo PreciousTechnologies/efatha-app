@@ -1,8 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_storage_service.dart';
 import '../../widgets/onboarding_progress_indicator.dart';
 import '../../widgets/app_button.dart';
 import 'onboarding_controller.dart';
@@ -11,6 +16,7 @@ import 'pages/location_info_page.dart';
 import 'pages/contact_info_page.dart';
 import 'pages/church_details_page.dart';
 import 'pages/confirmation_page.dart';
+import '../auth/returning_user_login_screen.dart';
 import '../home/home_screen.dart';
 
 /// Main Onboarding Screen with 5 pages
@@ -59,17 +65,121 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // Get form data
       final formData = _controller.formData;
 
-      // Submit to backend API
-      final apiService = ApiService();
-      final storageService = StorageService();
+      // Supabase-first registration (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        await _registerWithSupabase(formData);
+      } else {
+        await _registerWithDjango(formData);
+      }
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_friendlySignUpError(e.message)),
+          backgroundColor: AppColors.dangerRedPrimary,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Registration failed: $e'),
+          backgroundColor: AppColors.dangerRedPrimary,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
 
-      // Prepare registration data in format backend expects
-      final registrationData = {
-        'username': formData['email'], // Use email as username
-        'email': formData['email'],
-        'password':
-            'defaultPassword123', // TODO: Add password field in onboarding
-        'password_confirm': 'defaultPassword123',
+  String _friendlySignUpError(String message) {
+    final friendly = SupabaseAuthService.friendlyError(message);
+    // Preserve the "Registration failed:" prefix for non-friendly fallbacks.
+    if (friendly == message) return 'Registration failed: $message';
+    return friendly;
+  }
+
+  /// Register via Supabase Auth + profiles table.
+  /// Throws on failure so _handleSubmit shows the error snackbar.
+  Future<void> _registerWithSupabase(Map<String, dynamic> formData) async {
+    final auth = SupabaseAuthService();
+    final email = (formData['email'] as String).trim();
+    final password = formData['password'] as String;
+
+    final profile = {
+      'username': email.split('@').first,
+      'first_name': formData['firstName'],
+      'middle_name': formData['middleName'],
+      'last_name': formData['lastName'],
+      'gender': formData['gender'],
+      'date_of_birth': formData['birthDate']?.toIso8601String().split('T')[0],
+      'marital_status': formData['marriageStatus'],
+      'phone_number': formData['phone'],
+      'postal_address': formData['postalAddress'],
+      'country': formData['countryName'],
+      'region': formData['regionName'],
+      'city': formData['districtName'],
+      'residence': formData['residence'],
+      'street': formData['street'],
+      'house_number': formData['houseNumber'],
+      'church_position': formData['churchPosition'],
+      'service_region': formData['serviceRegion'],
+      'membership_number': formData['membershipNumber'],
+    };
+
+    final response = await auth.signUp(
+      email: email,
+      password: password,
+      profile: profile,
+    );
+
+    final user = response.user;
+    if (user == null) {
+      throw Exception('Sign-up failed. Please try again.');
+    }
+
+    // Upload profile picture to Supabase Storage if one was selected.
+    if (formData['profileImage'] != null) {
+      try {
+        final url = await SupabaseStorageService().uploadProfilePicture(
+          user.id,
+          File(formData['profileImage'] as String),
+        );
+        await auth.updateProfile({'profile_picture_url': url});
+      } catch (e) {
+        // Don't fail registration if the picture upload fails.
+        debugPrint('Profile picture upload failed: $e');
+      }
+    }
+
+    if (!mounted) return;
+
+    // If email confirmation is ON in Supabase, there is no session yet —
+    // ask the user to confirm email, then sign in with OTP/password.
+    if (response.session == null) {
+      await _showCheckEmailDialog(email);
+      return;
+    }
+
+    await _showWelcomeDialog();
+  }
+
+  /// Legacy Django registration (fallback until Supabase cutover).
+  Future<void> _registerWithDjango(Map<String, dynamic> formData) async {
+    // Submit to backend API
+    final apiService = ApiService();
+    final storageService = StorageService();
+
+    // Prepare registration data in format backend expects
+    final registrationData = {
+      'username': formData['email'], // Use email as username
+      'email': formData['email'],
+      'password': formData['password'],
+      'password_confirm': formData['password'],
         // Personal Information
         'first_name': formData['firstName'],
         'middle_name': formData['middleName'],
@@ -150,80 +260,130 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (!mounted) return;
 
       // Show success dialog
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          contentPadding: const EdgeInsets.all(32),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: AppColors.successGreenPrimary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle,
-                  size: 48,
-                  color: AppColors.successGreenPrimary,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Welcome to Efatha!',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.neutralTextPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Your registration was successful. You are now part of our church community!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.neutralTextMuted,
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: AppButton(
-                  label: 'Get Started',
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    _navigateToHome();
-                  },
-                  variant: AppButtonVariant.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
+      await _showWelcomeDialog();
+  }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Registration failed: $e'),
-          backgroundColor: AppColors.dangerRedPrimary,
+  /// "Check your email" dialog when Supabase email confirmation is ON.
+  Future<void> _showCheckEmailDialog(String email) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.all(32),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.accentBlueBrand.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.mark_email_read_outlined,
+                size: 48,
+                color: AppColors.accentBlueBrand,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Check Your Email',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.neutralTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'We sent a 6-digit code and a confirmation link to $email. '
+              'Enter the code on the sign-in screen, or tap the link, then sign in.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.neutralTextMuted,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: AppButton(
+                label: 'Go to Sign In',
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => const ReturningUserLoginScreen(),
+                    ),
+                    (route) => false,
+                  );
+                },
+                variant: AppButtonVariant.primary,
+              ),
+            ),
+          ],
         ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
+      ),
+    );
+  }
+
+  /// Welcome dialog after successful registration + auto sign-in.
+  Future<void> _showWelcomeDialog() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.all(32),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.successGreenPrimary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle,
+                size: 48,
+                color: AppColors.successGreenPrimary,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Welcome to Efatha!',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.neutralTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Your registration was successful. You are now part of our church community!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: AppColors.neutralTextMuted),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: AppButton(
+                label: 'Get Started',
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _navigateToHome();
+                },
+                variant: AppButtonVariant.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _navigateToHome() {

@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/supabase_auth_service.dart';
+import '../../core/services/supabase_storage_service.dart';
 import '../../core/config/api_config.dart';
 import 'edit_profile_screen.dart';
 
@@ -36,6 +40,22 @@ class _ProfileSectionState extends State<ProfileSection> {
     });
 
     try {
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        try {
+          final profile = await SupabaseAuthService().getCurrentProfile();
+          if (profile != null && mounted) {
+            setState(() {
+              _userData = profile;
+              _isLoading = false;
+            });
+            return;
+          }
+        } catch (_) {
+          // Fall through to Django.
+        }
+      }
+
       // First, try to get data from local storage
       final localData = await _storageService.getUserData();
 
@@ -183,6 +203,39 @@ class _ProfileSectionState extends State<ProfileSection> {
               const Center(child: CircularProgressIndicator()),
         );
 
+        // Supabase-first (Django fallback while migrating).
+        if (SupabaseConfig.isConfigured) {
+          try {
+            final auth = SupabaseAuthService();
+            final uid = auth.currentUser?.id;
+            if (uid == null) throw Exception('Not authenticated');
+            final url = await SupabaseStorageService().uploadProfilePicture(
+              uid,
+              File(pickedFile.path),
+            );
+            await auth.updateProfile({'profile_picture_url': url});
+            if (!mounted) return;
+            Navigator.pop(context); // Close loading dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Profile picture updated successfully'),
+                backgroundColor: AppColors.successGreenPrimary,
+              ),
+            );
+            await _loadUserData(); // Reload user data
+          } catch (e) {
+            if (!mounted) return;
+            Navigator.pop(context); // Close loading dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to upload profile picture: $e'),
+                backgroundColor: AppColors.dangerRedPrimary,
+              ),
+            );
+          }
+          return;
+        }
+
         // Upload to backend
         final response = await _apiService.uploadProfilePicture(
           pickedFile.path,
@@ -237,6 +290,36 @@ class _ProfileSectionState extends State<ProfileSection> {
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
+
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        try {
+          final auth = SupabaseAuthService();
+          final uid = auth.currentUser?.id;
+          if (uid == null) throw Exception('Not authenticated');
+          await SupabaseStorageService().removeProfilePictures(uid);
+          await auth.updateProfile({'profile_picture_url': null});
+          if (!mounted) return;
+          Navigator.pop(context); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile picture deleted successfully'),
+              backgroundColor: AppColors.successGreenPrimary,
+            ),
+          );
+          await _loadUserData(); // Reload user data
+        } catch (e) {
+          if (!mounted) return;
+          Navigator.pop(context); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete profile picture: $e'),
+              backgroundColor: AppColors.dangerRedPrimary,
+            ),
+          );
+        }
+        return;
+      }
 
       // Call API to delete profile picture
       final response = await _apiService.deleteProfilePicture();
@@ -394,6 +477,34 @@ class _ProfileSectionState extends State<ProfileSection> {
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
+
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        try {
+          await SupabaseAuthService().updateProfile({'bio': result});
+          if (!mounted) return;
+          Navigator.pop(context); // Close loading dialog
+          setState(() {
+            _userData['bio'] = result;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bio updated successfully'),
+              backgroundColor: AppColors.successGreenPrimary,
+            ),
+          );
+        } catch (e) {
+          if (!mounted) return;
+          Navigator.pop(context); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to update bio: $e'),
+              backgroundColor: AppColors.dangerRedPrimary,
+            ),
+          );
+        }
+        return;
+      }
 
       // Call API to update bio
       final response = await _apiService.updateBio(result);

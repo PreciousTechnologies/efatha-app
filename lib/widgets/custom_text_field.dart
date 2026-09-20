@@ -18,6 +18,7 @@ class CustomTextField extends StatelessWidget {
   final TextEditingController? controller;
   final bool readOnly;
   final VoidCallback? onTap;
+  final bool obscureText;
 
   const CustomTextField({
     super.key,
@@ -36,6 +37,7 @@ class CustomTextField extends StatelessWidget {
     this.controller,
     this.readOnly = false,
     this.onTap,
+    this.obscureText = false,
   });
 
   @override
@@ -72,6 +74,7 @@ class CustomTextField extends StatelessWidget {
           controller: controller,
           initialValue: controller == null ? initialValue : null,
           keyboardType: keyboardType,
+          obscureText: obscureText,
           maxLines: maxLines,
           maxLength: maxLength,
           inputFormatters: inputFormatters,

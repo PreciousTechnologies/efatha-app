@@ -50,10 +50,57 @@ class SupabaseStorageService {
     );
   }
 
+  Future<String> uploadTestimonyFile({
+    required String testimonyId,
+    required String kind, // photo | video | thumbnail
+    required File file,
+  }) async {
+    final ext = file.path.split('.').last.toLowerCase();
+    return uploadFile(
+      bucket: 'testimonies',
+      path: '$testimonyId/$kind.$ext',
+      file: file,
+    );
+  }
+
+  Future<String> uploadEventBanner(String eventId, File file) {
+    final ext = file.path.split('.').last.toLowerCase();
+    return uploadFile(
+      bucket: 'events',
+      path: '$eventId/banner.$ext',
+      file: file,
+      contentType: 'image/$ext',
+    );
+  }
+
+  /// Prayer images allow multiples — timestamp the filename.
+  Future<String> uploadPrayerImage(String prayerId, File file) {
+    final ext = file.path.split('.').last.toLowerCase();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    return uploadFile(
+      bucket: 'prayers',
+      path: '$prayerId/$stamp.$ext',
+      file: file,
+      contentType: 'image/$ext',
+    );
+  }
+
   Future<void> removeFiles({
     required String bucket,
     required List<String> paths,
   }) async {
     await _c.storage.from(bucket).remove(paths);
+  }
+
+  /// Remove all avatar files for a user (any extension).
+  Future<void> removeProfilePictures(String userId) async {
+    final objects = await _c.storage.from('profiles').list(path: userId);
+    final paths = objects
+        .where((o) => o.name != null && o.name!.isNotEmpty)
+        .map((o) => '$userId/${o.name}')
+        .toList();
+    if (paths.isNotEmpty) {
+      await removeFiles(bucket: 'profiles', paths: paths);
+    }
   }
 }

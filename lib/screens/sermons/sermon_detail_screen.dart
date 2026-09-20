@@ -11,6 +11,8 @@ import 'dart:convert';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/config/api_config.dart';
+import '../../core/config/supabase_config.dart';
+import '../../core/services/supabase_database_service.dart';
 
 class SermonDetailScreen extends StatefulWidget {
   final Map<String, dynamic> sermon;
@@ -54,6 +56,21 @@ class _SermonDetailScreenState extends State<SermonDetailScreen> {
         print('❌ ERROR: Sermon ID is null, cannot increment view');
         print('❌ Sermon data: ${widget.sermon}');
         print('═══════════════════════════════════════');
+        return;
+      }
+
+      // Supabase-first (Django fallback while migrating).
+      if (SupabaseConfig.isConfigured) {
+        final db = SupabaseDatabaseService();
+        final currentViews = (widget.sermon['views'] as num?)?.toInt() ?? 0;
+        await db.incrementSermonViews(sermonId.toString(), currentViews);
+        _viewCounted = true;
+        print('✅ SUCCESS! View count incremented (Supabase).');
+        if (mounted) {
+          setState(() {
+            widget.sermon['views'] = currentViews + 1;
+          });
+        }
         return;
       }
 
